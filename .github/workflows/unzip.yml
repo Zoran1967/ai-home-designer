@@ -2,7 +2,7 @@ name: Raspakuj zip i commituj
 
 on:
   push:
-    branches: [dev]
+    branches: [main, dev]
     paths:
       - '*.zip'
   workflow_dispatch:
@@ -16,8 +16,6 @@ jobs:
     steps:
       - name: Preuzmi repo
         uses: actions/checkout@v4
-        with:
-          ref: dev
 
       - name: Raspakuj zip arhive
         run: |
@@ -33,7 +31,7 @@ jobs:
             git rm -q "$f"
           done
 
-      - name: Commit i push na dev
+      - name: Commit i push na istu granu
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -43,4 +41,4 @@ jobs:
             exit 0
           fi
           git commit -m "Dodati fajlovi iz zip arhive"
-          git push origin dev
+          git push origin HEAD:${{ github.ref_name }}
