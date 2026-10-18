@@ -1,0 +1,46 @@
+name: Raspakuj zip i commituj
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '*.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preuzmi repo
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Raspakuj zip arhive
+        run: |
+          shopt -s nullglob
+          files=(*.zip)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "Nema zip fajlova u korenu repoa."
+            exit 0
+          fi
+          for f in "${files[@]}"; do
+            echo "Raspakujem $f"
+            unzip -o "$f" -d .
+            git rm -q "$f"
+          done
+
+      - name: Commit i push na dev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nema promena za commit."
+            exit 0
+          fi
+          git commit -m "Dodati fajlovi iz zip arhive"
+          git push origin dev
