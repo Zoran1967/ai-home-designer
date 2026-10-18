@@ -32,6 +32,10 @@ interface RoomDao {
     @Update
     suspend fun update(room: RoomEntity)
 
+    /** Menja samo položaj na planu, ostala polja sobe ostaju netaknuta. */
+    @Query("UPDATE rooms SET xM = :xM, yM = :yM WHERE id = :id")
+    suspend fun updatePosition(id: String, xM: Double, yM: Double)
+
     @Query("DELETE FROM rooms WHERE id = :id")
     suspend fun deleteById(id: String)
 }

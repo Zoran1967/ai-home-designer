@@ -19,13 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.ui.CreateProjectScreen
+import com.zoran.aihomedesigner.ui.PlanScreen
 import com.zoran.aihomedesigner.ui.ProjectListScreen
 import com.zoran.aihomedesigner.ui.ProjectsViewModel
 import com.zoran.aihomedesigner.ui.RoomFormScreen
 import com.zoran.aihomedesigner.ui.RoomListScreen
 import kotlinx.coroutines.flow.flowOf
 
-private enum class Screen { PROJECTS, CREATE_PROJECT, ROOMS, CREATE_ROOM, EDIT_ROOM }
+private enum class Screen { PROJECTS, CREATE_PROJECT, ROOMS, CREATE_ROOM, EDIT_ROOM, PLAN }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +58,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
-            Screen.CREATE_ROOM, Screen.EDIT_ROOM -> Screen.ROOMS
+            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN -> Screen.ROOMS
             else -> {
                 selectedProjectId = null
                 Screen.PROJECTS
@@ -68,7 +69,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     // Ako je izabrani projekat ili soba nestala (npr. obrisana), vrati se korak nazad.
     LaunchedEffect(projects, rooms, selectedProjectId, selectedRoomId, screen) {
         val needsProject = screen == Screen.ROOMS || screen == Screen.CREATE_ROOM ||
-            screen == Screen.EDIT_ROOM
+            screen == Screen.EDIT_ROOM || screen == Screen.PLAN
         if (needsProject && projects != null && selectedProject == null) {
             selectedProjectId = null
             screen = Screen.PROJECTS
@@ -107,6 +108,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     selectedRoomId = it.id
                     screen = Screen.EDIT_ROOM
                 },
+                onOpenPlan = { screen = Screen.PLAN },
                 onDeleteRoom = { viewModel.deleteRoom(it.id) }
             )
         }
@@ -126,6 +128,15 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onSubmit = { input, onResult -> viewModel.updateRoom(room.id, input, onResult) },
                 onDone = { screen = Screen.ROOMS },
                 onCancel = { screen = Screen.ROOMS }
+            )
+        }
+
+        Screen.PLAN -> selectedProject?.let { project ->
+            PlanScreen(
+                rooms = rooms,
+                onBack = { screen = Screen.ROOMS },
+                onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
+                onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) }
             )
         }
     }

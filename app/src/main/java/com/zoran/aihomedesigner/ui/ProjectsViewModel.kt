@@ -67,6 +67,18 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun moveRoom(roomId: String, xM: Double, yM: Double) {
+        viewModelScope.launch {
+            roomRepository.moveRoom(roomId, xM, yM)
+        }
+    }
+
+    fun placeUnplacedRooms(projectId: String) {
+        viewModelScope.launch {
+            roomRepository.placeUnplacedRooms(projectId)
+        }
+    }
+
     fun deleteRoom(id: String) {
         viewModelScope.launch {
             roomRepository.deleteRoom(id)

@@ -58,4 +58,17 @@
     <string name="error_dim_not_number">Upišite broj, na primer 3,5.</string>
     <string name="error_dim_too_small">Mera je premala. Najmanje %1$s m.</string>
     <string name="error_dim_too_large">Mera je prevelika. Najviše %1$s m.</string>
+
+    <!-- 2D plan -->
+    <string name="plan_button">Plan</string>
+    <string name="plan_zoom_in">+</string>
+    <string name="plan_zoom_out">−</string>
+    <string name="plan_fit">Prilagodi</string>
+    <string name="plan_empty">Nema soba za prikaz.</string>
+    <string name="plan_grid">Linije mreže: %1$s m</string>
+    <string name="plan_room_dimensions">%1$s × %2$s m</string>
+    <string name="plan_hint">Prevucite sobu da je pomerite. Prevlačenje po praznom mestu pomera prikaz, a dva prsta zumiraju. Raspored soba na planu nije izmeren. Provera zidova i prolaza još nije uključena.</string>
+    <string name="plan_overlap_warning">Neke sobe se preklapaju (crveni okvir).</string>
+    <string name="plan_selected_position">Gornji levi ugao: x = %1$s m, y = %2$s m</string>
+    <string name="plan_step">Korak: %1$s cm</string>
 </resources>

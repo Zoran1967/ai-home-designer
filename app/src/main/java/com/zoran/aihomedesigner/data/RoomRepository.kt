@@ -92,5 +92,19 @@ class RoomRepository(private val dao: RoomDao) {
         }
     }
 
+    /** Pomera sobu na planu. Neispravne koordinate (NaN, beskonačno, preko 1 km) se odbacuju. */
+    suspend fun moveRoom(roomId: String, xM: Double, yM: Double) {
+        if (!RoomPlacement.isValidCoordinate(xM) || !RoomPlacement.isValidCoordinate(yM)) return
+        dao.updatePosition(roomId, xM, yM)
+    }
+
+    /** Daje položaj sobama koje ga još nemaju (npr. sobe napravljene pre uvođenja plana). */
+    suspend fun placeUnplacedRooms(projectId: String) {
+        val rooms = dao.getByProject(projectId).mapNotNull { it.toDomainOrNull() }
+        for (placed in RoomPlacement.autoPlace(rooms)) {
+            dao.updatePosition(placed.id, placed.xM!!, placed.yM!!)
+        }
+    }
+
     suspend fun deleteRoom(id: String) = dao.deleteById(id)
 }

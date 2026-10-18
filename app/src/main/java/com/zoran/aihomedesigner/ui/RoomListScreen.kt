@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -38,6 +39,7 @@ fun RoomListScreen(
     onBack: () -> Unit,
     onAddRoom: () -> Unit,
     onOpenRoom: (Room) -> Unit,
+    onOpenPlan: () -> Unit,
     onDeleteRoom: (Room) -> Unit
 ) {
     var roomToDelete by remember { mutableStateOf<Room?>(null) }
@@ -55,8 +57,19 @@ fun RoomListScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            TextButton(onClick = onBack) {
-                Text(stringResource(R.string.back))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(R.string.back))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                if (!rooms.isNullOrEmpty()) {
+                    TextButton(onClick = onOpenPlan) {
+                        Text(stringResource(R.string.plan_button))
+                    }
+                }
             }
             Text(
                 text = projectName,
