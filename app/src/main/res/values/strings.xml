@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AI Home Designer</string>
-    <string name="skeleton_title">AI Home Designer</string>
-    <string name="skeleton_note">Osnovni kostur aplikacije. Projekti i sobe još nisu dodati.</string>
+
+    <string name="projects_title">Moji projekti</string>
+    <string name="projects_empty">Još nemate nijedan projekat. Dodirnite „Novi projekat“ da počnete.</string>
+    <string name="new_project">Novi projekat</string>
+
+    <string name="create_title">Novi projekat</string>
+    <string name="field_project_name">Ime projekta</string>
+    <string name="label_property_type">Vrsta nekretnine</string>
+    <string name="type_apartment">Stan</string>
+    <string name="type_house">Kuća</string>
+    <string name="save">Sačuvaj</string>
+    <string name="cancel">Odustani</string>
+
+    <string name="delete">Obriši</string>
+    <string name="delete_title">Brisanje projekta</string>
+    <string name="delete_message">Obrisati projekat „%1$s“? Ovo se ne može poništiti.</string>
+
+    <string name="error_name_empty">Upišite ime projekta.</string>
+    <string name="error_name_too_long">Ime može imati najviše %1$d znakova.</string>
+    <string name="error_name_duplicate">Projekat sa tim imenom već postoji. Izaberite drugo ime.</string>
 </resources>
