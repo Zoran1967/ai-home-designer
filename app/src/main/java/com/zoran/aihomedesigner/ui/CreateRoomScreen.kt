@@ -1,5 +1,7 @@
 package com.zoran.aihomedesigner.ui
 
+// Ovaj ekran služi i za pravljenje nove sobe (initialRoom = null) i za izmenu postojeće.
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,22 +30,33 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
-import com.zoran.aihomedesigner.data.CreateRoomResult
+import com.zoran.aihomedesigner.data.RoomSaveResult
 import com.zoran.aihomedesigner.domain.DimensionLimits
+import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.RoomInputErrors
 
 @Composable
-fun CreateRoomScreen(
-    onCreate: (RoomInput, (CreateRoomResult) -> Unit) -> Unit,
+fun RoomFormScreen(
+    initialRoom: Room?,
+    onSubmit: (RoomInput, (RoomSaveResult) -> Unit) -> Unit,
     onDone: () -> Unit,
     onCancel: () -> Unit
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
-    var length by rememberSaveable { mutableStateOf("") }
-    var width by rememberSaveable { mutableStateOf("") }
-    var height by rememberSaveable { mutableStateOf("") }
-    var thickness by rememberSaveable { mutableStateOf("") }
+    val key = initialRoom?.id
+    var name by rememberSaveable(key) { mutableStateOf(initialRoom?.name ?: "") }
+    var length by rememberSaveable(key) {
+        mutableStateOf(initialRoom?.let { metersToInputText(it.lengthM) } ?: "")
+    }
+    var width by rememberSaveable(key) {
+        mutableStateOf(initialRoom?.let { metersToInputText(it.widthM) } ?: "")
+    }
+    var height by rememberSaveable(key) {
+        mutableStateOf(initialRoom?.let { metersToInputText(it.heightM) } ?: "")
+    }
+    var thickness by rememberSaveable(key) {
+        mutableStateOf(initialRoom?.wallThicknessM?.let { metersToInputText(it) } ?: "")
+    }
     var errors by remember { mutableStateOf<RoomInputErrors?>(null) }
     var saving by remember { mutableStateOf(false) }
 
@@ -56,7 +69,9 @@ fun CreateRoomScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = stringResource(R.string.create_room_title),
+                text = stringResource(
+                    if (initialRoom == null) R.string.create_room_title else R.string.edit_room_title
+                ),
                 style = MaterialTheme.typography.headlineMedium
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -140,11 +155,12 @@ fun CreateRoomScreen(
                     onClick = {
                         saving = true
                         val input = RoomInput(name, length, width, height, thickness)
-                        onCreate(input) { result ->
+                        onSubmit(input) { result ->
                             saving = false
                             when (result) {
-                                is CreateRoomResult.Success -> onDone()
-                                is CreateRoomResult.Invalid -> errors = result.errors
+                                is RoomSaveResult.Success -> onDone()
+                                is RoomSaveResult.Invalid -> errors = result.errors
+                                RoomSaveResult.NotFound -> onDone()
                             }
                         }
                     }

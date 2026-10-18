@@ -24,8 +24,10 @@
 
     <!-- Sobe -->
     <string name="rooms_empty">U ovom projektu još nema soba. Dodirnite „Nova soba“ da dodate prvu.</string>
+    <string name="rooms_tap_to_edit">Dodirnite sobu da izmenite ime ili mere.</string>
     <string name="new_room">Nova soba</string>
     <string name="create_room_title">Nova soba</string>
+    <string name="edit_room_title">Izmena sobe</string>
     <string name="field_room_name">Ime sobe</string>
     <string name="field_room_length">Dužina sobe (m)</string>
     <string name="field_room_width">Širina sobe (m)</string>

@@ -1,5 +1,6 @@
 package com.zoran.aihomedesigner.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ fun RoomListScreen(
     rooms: List<Room>?,
     onBack: () -> Unit,
     onAddRoom: () -> Unit,
+    onOpenRoom: (Room) -> Unit,
     onDeleteRoom: (Room) -> Unit
 ) {
     var roomToDelete by remember { mutableStateOf<Room?>(null) }
@@ -59,7 +61,7 @@ fun RoomListScreen(
             Text(
                 text = projectName,
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             when {
@@ -77,12 +79,23 @@ fun RoomListScreen(
                     )
                 }
 
-                else -> LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 88.dp)
-                ) {
-                    items(rooms, key = { it.id }) { room ->
-                        RoomCard(room = room, onDelete = { roomToDelete = room })
+                else -> {
+                    Text(
+                        text = stringResource(R.string.rooms_tap_to_edit),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 88.dp)
+                    ) {
+                        items(rooms, key = { it.id }) { room ->
+                            RoomCard(
+                                room = room,
+                                onOpen = { onOpenRoom(room) },
+                                onDelete = { roomToDelete = room }
+                            )
+                        }
                     }
                 }
             }
@@ -110,7 +123,7 @@ fun RoomListScreen(
 }
 
 @Composable
-private fun RoomCard(room: Room, onDelete: () -> Unit) {
+private fun RoomCard(room: Room, onOpen: () -> Unit, onDelete: () -> Unit) {
     val thickness = room.wallThicknessM
     val thicknessText = if (thickness != null) {
         stringResource(R.string.room_thickness, formatMeters(thickness))
@@ -118,7 +131,7 @@ private fun RoomCard(room: Room, onDelete: () -> Unit) {
         stringResource(R.string.room_thickness_none)
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

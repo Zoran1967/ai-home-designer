@@ -1,5 +1,6 @@
 package com.zoran.aihomedesigner.ui
 
+import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -14,3 +15,10 @@ fun formatMeters(value: Double): String = format(value, "0.###")
 
 /** Površina za prikaz, do dve decimale (npr. 14,4). */
 fun formatArea(value: Double): String = format(value, "0.##")
+
+/**
+ * Tekst za polje za izmenu: tačna vrednost bez zaokruživanja, sa zarezom (npr. 4,5 ili 3,4567).
+ * Zaokruživanje ovde bi tiho promenilo sačuvanu meru pri ponovnom čuvanju.
+ */
+fun metersToInputText(value: Double): String =
+    BigDecimal(value.toString()).stripTrailingZeros().toPlainString().replace('.', ',')

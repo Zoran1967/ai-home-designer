@@ -5,9 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zoran.aihomedesigner.data.AppDatabase
 import com.zoran.aihomedesigner.data.CreateProjectResult
-import com.zoran.aihomedesigner.data.CreateRoomResult
 import com.zoran.aihomedesigner.data.ProjectRepository
 import com.zoran.aihomedesigner.data.RoomRepository
+import com.zoran.aihomedesigner.data.RoomSaveResult
 import com.zoran.aihomedesigner.domain.Project
 import com.zoran.aihomedesigner.domain.PropertyType
 import com.zoran.aihomedesigner.domain.Room
@@ -50,10 +50,20 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     fun createRoom(
         projectId: String,
         input: RoomInput,
-        onResult: (CreateRoomResult) -> Unit
+        onResult: (RoomSaveResult) -> Unit
     ) {
         viewModelScope.launch {
             onResult(roomRepository.createRoom(projectId, input))
+        }
+    }
+
+    fun updateRoom(
+        roomId: String,
+        input: RoomInput,
+        onResult: (RoomSaveResult) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(roomRepository.updateRoom(roomId, input))
         }
     }
 

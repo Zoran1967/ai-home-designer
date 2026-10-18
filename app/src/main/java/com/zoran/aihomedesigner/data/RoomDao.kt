@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -12,11 +13,21 @@ interface RoomDao {
     @Query("SELECT * FROM rooms WHERE projectId = :projectId ORDER BY createdAtMillis ASC")
     fun observeByProject(projectId: String): Flow<List<RoomEntity>>
 
+    @Query("SELECT * FROM rooms WHERE id = :id")
+    suspend fun getById(id: String): RoomEntity?
+
     @Query("SELECT name FROM rooms WHERE projectId = :projectId")
     suspend fun getNamesByProject(projectId: String): List<String>
 
+    /** Imena ostalih soba u projektu, bez sobe koja se menja (da se ne poredi sama sa sobom). */
+    @Query("SELECT name FROM rooms WHERE projectId = :projectId AND id != :excludeId")
+    suspend fun getNamesByProjectExcluding(projectId: String, excludeId: String): List<String>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(room: RoomEntity)
+
+    @Update
+    suspend fun update(room: RoomEntity)
 
     @Query("DELETE FROM rooms WHERE id = :id")
     suspend fun deleteById(id: String)
