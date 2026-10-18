@@ -2,23 +2,58 @@
 <resources>
     <string name="app_name">AI Home Designer</string>
 
+    <string name="back">‹ Nazad</string>
+    <string name="save">Sačuvaj</string>
+    <string name="cancel">Odustani</string>
+    <string name="delete">Obriši</string>
+
+    <!-- Projekti -->
     <string name="projects_title">Moji projekti</string>
     <string name="projects_empty">Još nemate nijedan projekat. Dodirnite „Novi projekat“ da počnete.</string>
     <string name="new_project">Novi projekat</string>
-
     <string name="create_title">Novi projekat</string>
     <string name="field_project_name">Ime projekta</string>
     <string name="label_property_type">Vrsta nekretnine</string>
     <string name="type_apartment">Stan</string>
     <string name="type_house">Kuća</string>
-    <string name="save">Sačuvaj</string>
-    <string name="cancel">Odustani</string>
-
-    <string name="delete">Obriši</string>
     <string name="delete_title">Brisanje projekta</string>
-    <string name="delete_message">Obrisati projekat „%1$s“? Ovo se ne može poništiti.</string>
-
+    <string name="delete_message">Obrisati projekat „%1$s“ i sve njegove sobe? Ovo se ne može poništiti.</string>
     <string name="error_name_empty">Upišite ime projekta.</string>
     <string name="error_name_too_long">Ime može imati najviše %1$d znakova.</string>
     <string name="error_name_duplicate">Projekat sa tim imenom već postoji. Izaberite drugo ime.</string>
+
+    <!-- Sobe -->
+    <string name="rooms_empty">U ovom projektu još nema soba. Dodirnite „Nova soba“ da dodate prvu.</string>
+    <string name="new_room">Nova soba</string>
+    <string name="create_room_title">Nova soba</string>
+    <string name="field_room_name">Ime sobe</string>
+    <string name="field_room_length">Dužina sobe (m)</string>
+    <string name="field_room_width">Širina sobe (m)</string>
+    <string name="field_room_height">Visina zida (m)</string>
+    <string name="field_room_thickness">Debljina zida (m), nije obavezno</string>
+    <string name="hint_room_name">Na primer: Dnevna soba</string>
+    <string name="hint_room_length">Unutrašnja mera, od zida do zida. Na primer: 4,5</string>
+    <string name="hint_room_width">Unutrašnja mera, od zida do zida. Na primer: 3,2</string>
+    <string name="hint_room_height">Od poda do plafona. Na primer: 2,6</string>
+    <string name="hint_room_thickness">Ostavite prazno ako ne znate. Na primer: 0,2</string>
+    <string name="delete_room_title">Brisanje sobe</string>
+    <string name="delete_room_message">Obrisati sobu „%1$s“? Ovo se ne može poništiti.</string>
+
+    <string name="room_dimensions">%1$s × %2$s m · %3$s m²</string>
+    <string name="room_height">Visina zida: %1$s m</string>
+    <string name="room_thickness">Debljina zida: %1$s m</string>
+    <string name="room_thickness_none">Debljina zida: nije uneta</string>
+
+    <string name="source_user_confirmed">Mere je upisao korisnik</string>
+    <string name="source_imported">Mere iz uvezenog plana</string>
+    <string name="source_detected">Automatski prepoznate mere, nisu potvrđene</string>
+    <string name="source_estimated">Procenjene mere</string>
+
+    <string name="room_error_name_empty">Upišite ime sobe.</string>
+    <string name="room_error_name_too_long">Ime sobe može imati najviše %1$d znakova.</string>
+    <string name="room_error_name_duplicate">Soba sa tim imenom već postoji u ovom projektu.</string>
+    <string name="error_dim_missing">Upišite meru.</string>
+    <string name="error_dim_not_number">Upišite broj, na primer 3,5.</string>
+    <string name="error_dim_too_small">Mera je premala. Najmanje %1$s m.</string>
+    <string name="error_dim_too_large">Mera je prevelika. Najviše %1$s m.</string>
 </resources>

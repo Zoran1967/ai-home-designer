@@ -1,8 +1,10 @@
 package com.zoran.aihomedesigner.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +37,7 @@ import java.util.Date
 fun ProjectListScreen(
     projects: List<Project>?,
     onNewProject: () -> Unit,
+    onOpenProject: (Project) -> Unit,
     onDeleteProject: (Project) -> Unit
 ) {
     var projectToDelete by remember { mutableStateOf<Project?>(null) }
@@ -75,11 +78,12 @@ fun ProjectListScreen(
 
                 else -> LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp)
+                    contentPadding = PaddingValues(bottom = 88.dp)
                 ) {
                     items(projects, key = { it.id }) { project ->
                         ProjectCard(
                             project = project,
+                            onOpen = { onOpenProject(project) },
                             onDelete = { projectToDelete = project }
                         )
                     }
@@ -109,10 +113,10 @@ fun ProjectListScreen(
 }
 
 @Composable
-private fun ProjectCard(project: Project, onDelete: () -> Unit) {
+private fun ProjectCard(project: Project, onOpen: () -> Unit, onDelete: () -> Unit) {
     val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(project.createdAtMillis))
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
