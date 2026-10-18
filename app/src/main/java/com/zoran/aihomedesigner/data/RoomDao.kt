@@ -13,6 +13,9 @@ interface RoomDao {
     @Query("SELECT * FROM rooms WHERE projectId = :projectId ORDER BY createdAtMillis ASC")
     fun observeByProject(projectId: String): Flow<List<RoomEntity>>
 
+    @Query("SELECT * FROM rooms WHERE projectId = :projectId")
+    suspend fun getByProject(projectId: String): List<RoomEntity>
+
     @Query("SELECT * FROM rooms WHERE id = :id")
     suspend fun getById(id: String): RoomEntity?
 

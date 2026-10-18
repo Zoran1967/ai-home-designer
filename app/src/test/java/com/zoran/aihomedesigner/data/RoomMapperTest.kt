@@ -28,6 +28,18 @@ class RoomMapperTest {
     }
 
     @Test
+    fun positionSurvivesRoundTrip() {
+        val room = Room(
+            "r5", "p1", "Soba", 3.0, 3.0, 2.6, null,
+            DimensionSource.USER_CONFIRMED, 5L,
+            originXM = 5.25, originYM = 1.5
+        )
+        val back = room.toEntity().toDomainOrNull()!!
+        assertEquals(5.25, back.originXM, 0.0)
+        assertEquals(1.5, back.originYM, 0.0)
+    }
+
+    @Test
     fun dimensionSourceIsStoredByName() {
         val entity = Room(
             "r3", "p1", "Soba", 3.0, 3.0, 2.6, null,
