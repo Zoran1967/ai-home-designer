@@ -13,8 +13,21 @@ android {
         applicationId = "com.zoran.aihomedesigner"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
+        // Na GitHub Actions rastući broj građenja omogućava ažuriranje preko stare verzije.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionName = "0.1"
+    }
+
+    signingConfigs {
+        // Stalni DEBUG ključ, da se svako novo građenje potpisuje isto
+        // i da se aplikacija može ažurirati bez brisanja.
+        // Ovaj ključ je javan u repou. Nikada se ne sme koristiti za objavu u Play prodavnici.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
