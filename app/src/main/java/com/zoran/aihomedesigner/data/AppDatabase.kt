@@ -44,22 +44,13 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * Verzija 2 -> 3: dodaje položaj sobe na planu (originXM, originYM, u metrima).
-         * Postojeće sobe se slažu jedna pored druge duž x ose, istim redom kojim su pravljene,
-         * sa razmakom od 0,5 m, da se ne preklapaju na planu.
+         * Verzija 2 -> 3: dodaje položaj sobe na planu (xM, yM). Postojeće sobe dobijaju NULL,
+         * što znači "još nema položaj", a ne položaj (0, 0).
          */
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `rooms` ADD COLUMN `originXM` REAL NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE `rooms` ADD COLUMN `originYM` REAL NOT NULL DEFAULT 0")
-                db.execSQL(
-                    "UPDATE `rooms` SET `originXM` = COALESCE(" +
-                        "(SELECT SUM(r2.`lengthM` + 0.5) FROM `rooms` AS r2 " +
-                        "WHERE r2.`projectId` = `rooms`.`projectId` " +
-                        "AND (r2.`createdAtMillis` < `rooms`.`createdAtMillis` " +
-                        "OR (r2.`createdAtMillis` = `rooms`.`createdAtMillis` " +
-                        "AND r2.`id` < `rooms`.`id`))), 0)"
-                )
+                db.execSQL("ALTER TABLE `rooms` ADD COLUMN `xM` REAL")
+                db.execSQL("ALTER TABLE `rooms` ADD COLUMN `yM` REAL")
             }
         }
 

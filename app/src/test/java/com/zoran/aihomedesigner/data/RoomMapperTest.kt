@@ -28,18 +28,6 @@ class RoomMapperTest {
     }
 
     @Test
-    fun positionSurvivesRoundTrip() {
-        val room = Room(
-            "r5", "p1", "Soba", 3.0, 3.0, 2.6, null,
-            DimensionSource.USER_CONFIRMED, 5L,
-            originXM = 5.25, originYM = 1.5
-        )
-        val back = room.toEntity().toDomainOrNull()!!
-        assertEquals(5.25, back.originXM, 0.0)
-        assertEquals(1.5, back.originYM, 0.0)
-    }
-
-    @Test
     fun dimensionSourceIsStoredByName() {
         val entity = Room(
             "r3", "p1", "Soba", 3.0, 3.0, 2.6, null,
@@ -52,5 +40,25 @@ class RoomMapperTest {
     fun unknownSourceGivesNullInsteadOfWrongData() {
         val entity = RoomEntity("r4", "p1", "Soba", 3.0, 3.0, 2.6, null, "GUESS", 4L)
         assertNull(entity.toDomainOrNull())
+    }
+
+    @Test
+    fun positionSurvivesRoundTrip() {
+        val room = Room(
+            "r5", "p1", "Soba", 3.0, 3.0, 2.6, null,
+            DimensionSource.USER_CONFIRMED, 5L, xM = 5.25, yM = -1.5
+        )
+        val back = room.toEntity().toDomainOrNull()!!
+        assertEquals(5.25, back.xM!!, 0.0)
+        assertEquals(-1.5, back.yM!!, 0.0)
+    }
+
+    @Test
+    fun missingPositionStaysNullAndIsNotZero() {
+        val entity = RoomEntity("r6", "p1", "Soba", 3.0, 3.0, 2.6, null, "USER_CONFIRMED", 6L)
+        val room = entity.toDomainOrNull()!!
+        assertNull(room.xM)
+        assertNull(room.yM)
+        assertEquals(false, room.isPlaced)
     }
 }

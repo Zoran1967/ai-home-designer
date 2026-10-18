@@ -25,7 +25,7 @@ class RoomRepository(private val dao: RoomDao) {
 
     /**
      * Proverava unos, pa tek onda upisuje sobu. Mere koje je korisnik upisao vode se kao USER_CONFIRMED.
-     * Nova soba se postavlja desno od postojećih (početni raspored, ne merenje).
+     * Nova soba dobija početni položaj na planu (desno od postojećih soba).
      */
     suspend fun createRoom(
         projectId: String,
@@ -37,7 +37,7 @@ class RoomRepository(private val dao: RoomDao) {
             is RoomValidation.Invalid -> RoomSaveResult.Invalid(validation.errors)
             is RoomValidation.Valid -> {
                 val existing = dao.getByProject(projectId).mapNotNull { it.toDomainOrNull() }
-                val origin = RoomPlacement.nextOrigin(existing)
+                val position = RoomPlacement.nextPosition(existing)
                 val room = Room(
                     id = Room.newId(),
                     projectId = projectId,
@@ -48,8 +48,8 @@ class RoomRepository(private val dao: RoomDao) {
                     wallThicknessM = validation.wallThicknessM,
                     dimensionSource = DimensionSource.USER_CONFIRMED,
                     createdAtMillis = nowMillis,
-                    originXM = origin.xM,
-                    originYM = origin.yM
+                    xM = position.xM,
+                    yM = position.yM
                 )
                 dao.insert(room.toEntity())
                 RoomSaveResult.Success(room)
@@ -58,8 +58,9 @@ class RoomRepository(private val dao: RoomDao) {
     }
 
     /**
-     * Menja ime i mere postojeće sobe. Položaj sobe na planu se ne menja.
+     * Menja ime i mere postojeće sobe. Mere se menjaju samo onim što je korisnik upisao.
      * Ako se mere nisu promenile, izvor mera ostaje isti. Ako jesu, vode se kao USER_CONFIRMED.
+     * Položaj sobe na planu se ne menja.
      */
     suspend fun updateRoom(roomId: String, input: RoomInput): RoomSaveResult {
         val existing = dao.getById(roomId)?.toDomainOrNull() ?: return RoomSaveResult.NotFound

@@ -1,14 +1,13 @@
 package com.zoran.aihomedesigner.data
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Red u tabeli "rooms". Brisanjem projekta brišu se i njegove sobe. Mere i položaj su u metrima.
- * originXM i originYM su gornji levi ugao sobe na planu (x udesno, y nadole).
+ * Red u tabeli "rooms". Brisanjem projekta brišu se i njegove sobe. Mere su u metrima.
+ * xM i yM su položaj na planu; null znači da soba još nema položaj.
  */
 @Entity(
     tableName = "rooms",
@@ -32,6 +31,6 @@ data class RoomEntity(
     val wallThicknessM: Double?,
     val dimensionSource: String,
     val createdAtMillis: Long,
-    @ColumnInfo(defaultValue = "0") val originXM: Double = 0.0,
-    @ColumnInfo(defaultValue = "0") val originYM: Double = 0.0
+    val xM: Double? = null,
+    val yM: Double? = null
 )

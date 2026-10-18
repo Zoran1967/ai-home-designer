@@ -13,8 +13,8 @@ fun Room.toEntity(): RoomEntity = RoomEntity(
     wallThicknessM = wallThicknessM,
     dimensionSource = dimensionSource.name,
     createdAtMillis = createdAtMillis,
-    originXM = originXM,
-    originYM = originYM
+    xM = xM,
+    yM = yM
 )
 
 /** Vraća null ako je izvor mere u bazi nepoznat, da ne prikažemo pogrešne podatke. */
@@ -31,7 +31,7 @@ fun RoomEntity.toDomainOrNull(): Room? {
         wallThicknessM = wallThicknessM,
         dimensionSource = source,
         createdAtMillis = createdAtMillis,
-        originXM = originXM,
-        originYM = originYM
+        xM = xM,
+        yM = yM
     )
 }

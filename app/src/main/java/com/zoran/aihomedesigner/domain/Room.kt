@@ -14,18 +14,16 @@ enum class DimensionSource {
 }
 
 /**
- * Soba u projektu. Sada samo pravougaona, bez rotacije.
+ * Soba u projektu. Sada samo pravougaona.
  *
- * KOORDINATNI SISTEM PLANA (isti za ceo projekat):
- * - jedinica je metar,
- * - x raste udesno, y raste nadole (kao na ekranu telefona),
- * - tačka (0, 0) je proizvoljna početna tačka plana, a ne neka stvarna tačka u zgradi,
- * - (originXM, originYM) je gornji levi ugao sobe,
- * - dužina sobe ide duž x ose, a širina duž y ose.
- *
- * Mere sobe (dužina, širina, visina, debljina zida) su unutrašnje i u metrima.
- * Položaj sobe na planu je raspored koji korisnik slaže, a ne izmerena vrednost.
+ * Sve mere su u metrima. Dužina (lengthM) i širina (widthM) su unutrašnje mere (od zida do zida).
  * Debljina zida je opciona: null znači "nije uneto".
+ *
+ * Položaj na planu (xM, yM): gornji levi ugao unutrašnjosti sobe, u metrima, u koordinatnom
+ * sistemu projekta (x ide udesno, y ide nadole, vidi docs/koordinatni-sistem.md).
+ * Soba zauzima pravougaonik od (xM, yM) do (xM + lengthM, yM + widthM).
+ * null znači da soba još nema položaj na planu. To NIJE isto što i položaj (0, 0).
+ * Položaj sobe je raspored na planu i nije izmerena vrednost.
  */
 data class Room(
     val id: String,
@@ -37,17 +35,13 @@ data class Room(
     val wallThicknessM: Double?,
     val dimensionSource: DimensionSource,
     val createdAtMillis: Long,
-    val originXM: Double = 0.0,
-    val originYM: Double = 0.0
+    val xM: Double? = null,
+    val yM: Double? = null
 ) {
     /** Površina poda, izračunata iz dužine i širine. */
     val areaM2: Double get() = lengthM * widthM
 
-    /** Desna ivica sobe na planu. */
-    val rightM: Double get() = originXM + lengthM
-
-    /** Donja ivica sobe na planu. */
-    val bottomM: Double get() = originYM + widthM
+    val isPlaced: Boolean get() = xM != null && yM != null
 
     companion object {
         fun newId(): String = UUID.randomUUID().toString()

@@ -1,70 +1,67 @@
 package com.zoran.aihomedesigner.domain
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RoomPlacementTest {
 
-    private fun room(id: String, length: Double, width: Double, x: Double, y: Double) = Room(
-        id = id,
+    private fun room(
+        length: Double = 4.0,
+        width: Double = 3.0,
+        x: Double? = null,
+        y: Double? = null
+    ) = Room(
+        id = Room.newId(),
         projectId = "p",
-        name = id,
+        name = "Soba",
         lengthM = length,
         widthM = width,
         heightM = 2.6,
         wallThicknessM = null,
         dimensionSource = DimensionSource.USER_CONFIRMED,
         createdAtMillis = 1L,
-        originXM = x,
-        originYM = y
+        xM = x,
+        yM = y
     )
 
-    private fun overlaps(a: Room, b: Room): Boolean =
-        a.originXM < b.rightM && b.originXM < a.rightM &&
-            a.originYM < b.bottomM && b.originYM < a.bottomM
-
     @Test
-    fun firstRoomStartsAtOrigin() {
-        val origin = RoomPlacement.nextOrigin(emptyList())
-        assertEquals(0.0, origin.xM, 0.0)
-        assertEquals(0.0, origin.yM, 0.0)
+    fun firstRoomGoesToOrigin() {
+        assertEquals(PlanPoint(0.0, 0.0), RoomPlacement.nextPosition(emptyList()))
     }
 
     @Test
-    fun nextRoomIsPlacedToTheRightWithGap() {
-        val origin = RoomPlacement.nextOrigin(listOf(room("a", 4.5, 3.2, 0.0, 0.0)))
-        assertEquals(4.5 + RoomPlacement.GAP_M, origin.xM, 1e-9)
-        assertEquals(0.0, origin.yM, 0.0)
+    fun nextRoomGoesRightOfExistingRoomWithGap() {
+        val p = RoomPlacement.nextPosition(listOf(room(length = 4.0, x = 0.0, y = 0.0)))
+        assertEquals(4.0 + RoomPlacement.GAP_M, p.xM, 1e-9)
+        assertEquals(0.0, p.yM, 1e-9)
     }
 
     @Test
-    fun rightmostRoomDecidesThePosition() {
+    fun usesRightmostRoomEdgeAndTopmostY() {
         val rooms = listOf(
-            room("a", 4.0, 3.0, 0.0, 0.0),
-            room("b", 2.0, 2.0, 10.0, 5.0),
-            room("c", 3.0, 3.0, 4.5, 0.0)
+            room(length = 4.0, x = 0.0, y = 2.0),
+            room(length = 3.0, x = 6.0, y = 1.0)
         )
-        val origin = RoomPlacement.nextOrigin(rooms)
-        assertEquals(12.0 + RoomPlacement.GAP_M, origin.xM, 1e-9)
+        val p = RoomPlacement.nextPosition(rooms)
+        assertEquals(9.0 + RoomPlacement.GAP_M, p.xM, 1e-9)
+        assertEquals(1.0, p.yM, 1e-9)
     }
 
     @Test
-    fun newRoomNeverOverlapsExistingRooms() {
-        val existing = mutableListOf<Room>()
-        val sizes = listOf(4.5 to 3.2, 3.0 to 2.4, 2.0 to 1.2, 6.0 to 5.0, 0.5 to 0.5)
-        sizes.forEachIndexed { index, (length, width) ->
-            val origin = RoomPlacement.nextOrigin(existing)
-            val created = room("r$index", length, width, origin.xM, origin.yM)
-            assertTrue("Soba $index se preklapa", existing.none { overlaps(it, created) })
-            existing.add(created)
-        }
+    fun roomsWithoutPositionAreIgnored() {
+        val rooms = listOf(room(length = 10.0), room(length = 2.0, x = 1.0, y = 0.0))
+        val p = RoomPlacement.nextPosition(rooms)
+        assertEquals(3.0 + RoomPlacement.GAP_M, p.xM, 1e-9)
     }
 
     @Test
-    fun roomEdgesAreOriginPlusSize() {
-        val r = room("a", 4.0, 2.5, 1.0, 2.0)
-        assertEquals(5.0, r.rightM, 1e-9)
-        assertEquals(4.5, r.bottomM, 1e-9)
+    fun onlyUnplacedRoomsMeansOrigin() {
+        assertEquals(PlanPoint(0.0, 0.0), RoomPlacement.nextPosition(listOf(room(), room())))
+    }
+
+    @Test
+    fun roomWithOnlyOneCoordinateCountsAsUnplaced() {
+        assertEquals(false, room(x = 1.0, y = null).isPlaced)
+        assertEquals(true, room(x = 1.0, y = 2.0).isPlaced)
     }
 }
