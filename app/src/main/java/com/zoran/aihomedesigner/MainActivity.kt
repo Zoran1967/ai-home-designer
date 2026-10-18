@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.ui.CrashScreen
 import com.zoran.aihomedesigner.ui.CreateProjectScreen
 import com.zoran.aihomedesigner.ui.PlanScreen
 import com.zoran.aihomedesigner.ui.ProjectListScreen
@@ -34,7 +35,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppRoot()
+                    // Ako se aplikacija prošli put neočekivano zatvorila, prvo prikaži opis greške.
+                    var crashReport by remember { mutableStateOf(CrashReporter.readPending(applicationContext)) }
+                    val report = crashReport
+                    if (report != null) {
+                        CrashScreen(
+                            report = report,
+                            onContinue = {
+                                CrashReporter.clear(applicationContext)
+                                crashReport = null
+                            }
+                        )
+                    } else {
+                        AppRoot()
+                    }
                 }
             }
         }

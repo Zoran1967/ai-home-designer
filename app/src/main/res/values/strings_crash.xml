@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crash_title">Aplikacija se prošli put neočekivano zatvorila</string>
+    <string name="crash_explanation">Dole je tehnički opis greške. Dodirnite „Kopiraj“ i pošaljite ga programeru, pa nastavite u aplikaciju. Vaši projekti nisu obrisani.</string>
+    <string name="crash_copy">Kopiraj</string>
+    <string name="crash_continue">Nastavi</string>
+</resources>
