@@ -8,12 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [
-        ProjectEntity::class,
-        RoomEntity::class,
-        OpeningEntity::class,
-        FurnitureEntity::class
-    ],
+    entities = [ProjectEntity::class, RoomEntity::class, OpeningEntity::class, FurnitureEntity::class],
     version = 5,
     exportSchema = true
 )
@@ -104,7 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
                         "`heightM` REAL NOT NULL, " +
                         "`xM` REAL NOT NULL, " +
                         "`yM` REAL NOT NULL, " +
-                        "`quarterTurns` INTEGER NOT NULL, " +
+                        "`rotationDeg` INTEGER NOT NULL, " +
                         "`dimensionSource` TEXT NOT NULL, " +
                         "`createdAtMillis` INTEGER NOT NULL, " +
                         "PRIMARY KEY(`id`), " +
