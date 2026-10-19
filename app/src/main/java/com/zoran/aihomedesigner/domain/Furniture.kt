@@ -2,30 +2,19 @@ package com.zoran.aihomedesigner.domain
 
 import java.util.UUID
 
-enum class FurnitureCategory {
-    BED,
-    SOFA,
-    TABLE,
-    CHAIR,
-    WARDROBE,
-    DESK,
-    SHELF,
-    KITCHEN_UNIT,
-    APPLIANCE,
-    OTHER
-}
+enum class FurnitureCategory { BED, SOFA, TABLE, CHAIR, WARDROBE, DESK, SHELF, APPLIANCE, OTHER }
 
 /**
- * Komad nameštaja u jednoj sobi. Sve mere su u metrima.
+ * Komad nameštaja u jednoj sobi.
  *
- * lengthM, widthM i heightM su prave mere predmeta (dužina, širina, visina).
- * Pri quarterTurns = 0 dužina ide duž ose x sobe, a širina duž ose y.
+ * Mere su u metrima. lengthM i widthM su dimenzije predmeta kad nije okrenut (rotationDeg = 0),
+ * heightM je visina.
  *
- * Položaj (xM, yM) je gornji levi ugao tlocrta predmeta, meren od gornjeg levog ugla
- * unutrašnjosti sobe. Meri se od sobe, a ne od celog plana, da se nameštaj pomera zajedno sa sobom.
+ * Položaj (xM, yM) je gornji levi ugao pravougaonika koji predmet zauzima na podu, meren od gornjeg
+ * levog ugla unutrašnjosti sobe (x udesno, y nadole). Položaj je u odnosu na sobu, pa se nameštaj
+ * pomera zajedno sa sobom na planu.
  *
- * quarterTurns (0 do 3) je broj okretanja za po 90 stepeni u smeru kazaljke na satu.
- * Pri neparnom broju okretanja dužina i širina zamenjuju mesta u tlocrtu.
+ * rotationDeg je 0, 90, 180 ili 270. Za 90 i 270 se dužina i širina menjaju mesta na podu.
  */
 data class Furniture(
     val id: String,
@@ -37,15 +26,15 @@ data class Furniture(
     val heightM: Double,
     val xM: Double,
     val yM: Double,
-    val quarterTurns: Int,
+    val rotationDeg: Int,
     val dimensionSource: DimensionSource,
     val createdAtMillis: Long
 ) {
-    /** Dimenzija tlocrta duž ose x. */
-    val footprintLengthM: Double get() = if (quarterTurns % 2 == 0) lengthM else widthM
+    /** Koliko predmet zauzima duž ose x sobe, posle okretanja. */
+    val footprintLengthM: Double get() = if (rotationDeg % 180 == 0) lengthM else widthM
 
-    /** Dimenzija tlocrta duž ose y. */
-    val footprintWidthM: Double get() = if (quarterTurns % 2 == 0) widthM else lengthM
+    /** Koliko predmet zauzima duž ose y sobe, posle okretanja. */
+    val footprintWidthM: Double get() = if (rotationDeg % 180 == 0) widthM else lengthM
 
     companion object {
         fun newId(): String = UUID.randomUUID().toString()
