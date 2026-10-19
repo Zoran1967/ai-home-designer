@@ -50,7 +50,9 @@
     <string name="hint_opening_height">Na primer: 2,05</string>
     <string name="hint_opening_sill">Na primer: 0,9. Ako je prozor do poda, upišite 0.</string>
 
-    <string name="error_opening_exceeds_wall">Otvor ne staje u zid (zid je dug %1$s m). Smanjite širinu ili položaj.</string>
+    <string name="error_opening_exceeds_wall">Otvor ne staje u zid: zid je dug %1$s m, a za unetu širinu položaj može biti najviše %2$s m.</string>
+    <string name="error_opening_wider_than_wall">Otvor je širi od celog zida (zid je dug %1$s m). Smanjite širinu.</string>
+    <string name="opening_center_button">Postavi na sredinu zida</string>
     <string name="error_opening_too_tall">Otvor je previsok za ovu sobu (visina zida sobe je %1$s m).</string>
     <string name="error_opening_overlaps">Otvor se preklapa sa drugim otvorom na istom zidu.</string>
     <string name="error_opening_swing_missing">Izaberite kako se vrata otvaraju.</string>

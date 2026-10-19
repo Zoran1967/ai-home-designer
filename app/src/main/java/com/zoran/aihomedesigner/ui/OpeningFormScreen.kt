@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import com.zoran.aihomedesigner.domain.OpeningInput
 import com.zoran.aihomedesigner.domain.OpeningInputErrors
 import com.zoran.aihomedesigner.domain.OpeningLimits
 import com.zoran.aihomedesigner.domain.OpeningPlacementError
+import com.zoran.aihomedesigner.domain.OpeningValidator
 import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.WallGeometry
@@ -144,13 +146,28 @@ fun OpeningFormScreen(
                 },
                 errorText = errors?.offset?.let {
                     dimensionErrorText(it, 0.0, OpeningLimits.OFFSET_MAX_M)
-                } ?: errors?.placement?.let { placementErrorText(it, wallLength, room.heightM) },
+                } ?: errors?.placement?.let {
+                    placementErrorText(it, wallLength, room.heightM, errors?.maxOffsetM)
+                },
                 hint = stringResource(
                     R.string.hint_opening_offset,
                     wallStartLabel(side),
                     formatMeters(wallLength)
                 )
             )
+            val centeredOffset = OpeningValidator.parseMeters(width)
+                ?.let { OpeningValidator.centeredOffsetM(wallLength, it) }
+            TextButton(
+                enabled = centeredOffset != null,
+                onClick = {
+                    if (centeredOffset != null) {
+                        offset = metersToInputText(centeredOffset)
+                        errors = errors?.copy(offset = null, placement = null)
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.opening_center_button))
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             MeasureField(
@@ -264,17 +281,29 @@ fun OpeningFormScreen(
 }
 
 @Composable
-private fun placementErrorText(error: OpeningPlacementError, wallLengthM: Double, roomHeightM: Double): String =
-    when (error) {
-        OpeningPlacementError.EXCEEDS_WALL ->
-            stringResource(R.string.error_opening_exceeds_wall, formatMeters(wallLengthM))
+private fun placementErrorText(
+    error: OpeningPlacementError,
+    wallLengthM: Double,
+    roomHeightM: Double,
+    maxOffsetM: Double?
+): String = when (error) {
+    OpeningPlacementError.EXCEEDS_WALL ->
+        if (maxOffsetM != null && maxOffsetM >= 0.0) {
+            stringResource(
+                R.string.error_opening_exceeds_wall,
+                formatMeters(wallLengthM),
+                formatMeters(maxOffsetM)
+            )
+        } else {
+            stringResource(R.string.error_opening_wider_than_wall, formatMeters(wallLengthM))
+        }
 
-        OpeningPlacementError.TOO_TALL_FOR_ROOM ->
-            stringResource(R.string.error_opening_too_tall, formatMeters(roomHeightM))
+    OpeningPlacementError.TOO_TALL_FOR_ROOM ->
+        stringResource(R.string.error_opening_too_tall, formatMeters(roomHeightM))
 
-        OpeningPlacementError.OVERLAPS_OTHER ->
-            stringResource(R.string.error_opening_overlaps)
-    }
+    OpeningPlacementError.OVERLAPS_OTHER ->
+        stringResource(R.string.error_opening_overlaps)
+}
 
 @Composable
 private fun SectionTitle(text: String) {

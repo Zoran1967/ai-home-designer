@@ -47,7 +47,12 @@ data class OpeningInputErrors(
     val sillHeight: DimensionError?,
     val placement: OpeningPlacementError?,
     val swingMissing: Boolean,
-    val hingeMissing: Boolean
+    val hingeMissing: Boolean,
+    /**
+     * Kad otvor ne staje u zid: najveći položaj za koji bi uneta širina stala.
+     * Negativna vrednost znači da je otvor širi od celog zida.
+     */
+    val maxOffsetM: Double? = null
 ) {
     val hasErrors: Boolean
         get() = offset != null || width != null || height != null || sillHeight != null ||
@@ -87,6 +92,20 @@ object OpeningValidator {
         return Parsed.Value(value)
     }
 
+    /** Vraća vrednost u metrima ako je tekst ispravan broj (zarez ili tačka), inače null. */
+    fun parseMeters(raw: String): Double? {
+        val text = raw.trim()
+        if (!numberPattern.matches(text)) return null
+        val value = text.replace(',', '.').toDouble()
+        return if (value.isFinite()) value else null
+    }
+
+    /** Položaj otvora tako da bude na sredini zida, ili null ako je otvor širi od zida. */
+    fun centeredOffsetM(wallLengthM: Double, widthM: Double): Double? {
+        if (widthM > wallLengthM) return null
+        return RoomPlacement.roundToMm((wallLengthM - widthM) / 2.0)
+    }
+
     /**
      * Proverava unos za vrata ili prozor u zidu sobe [room].
      * [existingOnRoom] su drugi otvori u toj sobi. [editingId] je otvor koji se menja
@@ -116,6 +135,7 @@ object OpeningValidator {
             input.swing != DoorSwing.SLIDING && input.hinge == null
 
         var placement: OpeningPlacementError? = null
+        var maxOffset: Double? = null
         val sillOk = isDoor || sill is Parsed.Value
         if (offset is Parsed.Value && width is Parsed.Value && height is Parsed.Value && sillOk) {
             val sillM = if (sill is Parsed.Value) sill.meters else 0.0
@@ -136,6 +156,9 @@ object OpeningValidator {
 
                 else -> null
             }
+            if (placement == OpeningPlacementError.EXCEEDS_WALL) {
+                maxOffset = wallLength - width.meters
+            }
         }
 
         val errors = OpeningInputErrors(
@@ -145,7 +168,8 @@ object OpeningValidator {
             sillHeight = (sill as? Parsed.Failure)?.error,
             placement = placement,
             swingMissing = swingMissing,
-            hingeMissing = hingeMissing
+            hingeMissing = hingeMissing,
+            maxOffsetM = maxOffset
         )
         if (errors.hasErrors) return OpeningValidation.Invalid(errors)
 
