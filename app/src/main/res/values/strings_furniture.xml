@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="room_furniture_button">Nameštaj</string>
+
+    <string name="furniture_title">Nameštaj</string>
+    <string name="furniture_empty">U ovoj sobi još nema nameštaja. Dodirnite „Dodaj“ da dodate prvi predmet.</string>
+    <string name="furniture_add">Dodaj</string>
+    <string name="furniture_room_info">Soba je %1$s × %2$s m, visina zida %3$s m.</string>
+    <string name="furniture_tap_to_edit">Dodirnite predmet da izmenite ime ili mere.</string>
+    <string name="delete_furniture_title">Brisanje predmeta</string>
+    <string name="delete_furniture_message">Obrisati „%1$s“? Ovo se ne može poništiti.</string>
+    <string name="furniture_size_line">%1$s × %2$s × %3$s m (dužina × širina × visina)</string>
+    <string name="furniture_rotation_line">Okrenut za %1$d°</string>
+    <string name="furniture_title_line">%1$s · %2$s</string>
+
+    <string name="furniture_cat_bed">Krevet</string>
+    <string name="furniture_cat_sofa">Sofa ili fotelja</string>
+    <string name="furniture_cat_table">Sto</string>
+    <string name="furniture_cat_chair">Stolica</string>
+    <string name="furniture_cat_wardrobe">Plakar</string>
+    <string name="furniture_cat_desk">Radni sto</string>
+    <string name="furniture_cat_shelf">Polica ili komoda</string>
+    <string name="furniture_cat_appliance">Aparat (frižider, šporet…)</string>
+    <string name="furniture_cat_other">Ostalo</string>
+
+    <string name="create_furniture_title">Novi predmet</string>
+    <string name="edit_furniture_title">Izmena predmeta</string>
+    <string name="field_furniture_name">Ime predmeta</string>
+    <string name="hint_furniture_name">Na primer: Bračni krevet</string>
+    <string name="label_furniture_category">Vrsta predmeta</string>
+    <string name="field_furniture_length">Dužina (m)</string>
+    <string name="field_furniture_width">Širina (m)</string>
+    <string name="field_furniture_height">Visina (m)</string>
+    <string name="hint_furniture_length">Mera predmeta kad nije okrenut. Na primer: 2</string>
+    <string name="hint_furniture_width">Mera predmeta kad nije okrenut. Na primer: 1,6</string>
+    <string name="hint_furniture_height">Na primer: 0,5</string>
+    <string name="label_furniture_rotation">Okrenut za</string>
+    <string name="furniture_rotation_option">%1$d°</string>
+    <string name="furniture_rotation_note">Dužina predmeta ide duž zida sobe koji je vodoravan na planu. Okretanje za 90° ili 270° menja strane.</string>
+
+    <string name="furniture_error_name_empty">Upišite ime predmeta.</string>
+    <string name="furniture_error_name_too_long">Ime može imati najviše %1$d znakova.</string>
+
+    <string name="furniture_issue_outside">„%1$s“ izlazi iz sobe.</string>
+    <string name="furniture_issue_too_tall">„%1$s“ je viši od sobe.</string>
+    <string name="furniture_issue_overlap">„%1$s“ i „%2$s“ se preklapaju.</string>
+    <string name="furniture_issue_blocks_door">„%1$s“ blokira vrata (prolaz ispred vrata ili luk otvaranja).</string>
+    <string name="furniture_checked">Provereno samo: izlazak iz sobe, visina, preklapanje predmeta i blokiranje vrata. Širina prolaza između predmeta se ne proverava.</string>
+    <string name="furniture_checked_ok">Ove provere nisu našle problem (izlazak iz sobe, visina, preklapanje predmeta, blokiranje vrata). Širina prolaza između predmeta se ne proverava.</string>
+</resources>
