@@ -8,8 +8,13 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProjectEntity::class, RoomEntity::class, OpeningEntity::class],
-    version = 4,
+    entities = [
+        ProjectEntity::class,
+        RoomEntity::class,
+        OpeningEntity::class,
+        FurnitureEntity::class
+    ],
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -19,6 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun roomDao(): RoomDao
 
     abstract fun openingDao(): OpeningDao
+
+    abstract fun furnitureDao(): FurnitureDao
 
     companion object {
         /** Verzija 1 -> 2: dodaje tabelu soba. Postojeći projekti ostaju netaknuti. */
@@ -83,6 +90,33 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Verzija 4 -> 5: dodaje tabelu nameštaja. Postojeći podaci ostaju netaknuti. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `furniture` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`roomId` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`category` TEXT NOT NULL, " +
+                        "`lengthM` REAL NOT NULL, " +
+                        "`widthM` REAL NOT NULL, " +
+                        "`heightM` REAL NOT NULL, " +
+                        "`xM` REAL NOT NULL, " +
+                        "`yM` REAL NOT NULL, " +
+                        "`quarterTurns` INTEGER NOT NULL, " +
+                        "`dimensionSource` TEXT NOT NULL, " +
+                        "`createdAtMillis` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`), " +
+                        "FOREIGN KEY(`roomId`) REFERENCES `rooms`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_furniture_roomId` ON `furniture` (`roomId`)"
+                )
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -93,7 +127,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "ai_home_designer.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { instance = it }
             }
