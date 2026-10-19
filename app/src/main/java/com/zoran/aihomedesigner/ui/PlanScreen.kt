@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -50,10 +51,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
+import com.zoran.aihomedesigner.domain.PlanIssue
 import com.zoran.aihomedesigner.domain.PlanPoint
+import com.zoran.aihomedesigner.domain.PlanValidator
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomGeometry
 import com.zoran.aihomedesigner.domain.RoomPlacement
+import com.zoran.aihomedesigner.domain.SharedWall
+import com.zoran.aihomedesigner.domain.SharedWalls
+import com.zoran.aihomedesigner.domain.WallOrientation
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -61,6 +67,7 @@ import kotlin.math.roundToInt
 private const val MIN_SCALE = 8f   // najmanje piksela po metru
 private const val MAX_SCALE = 600f // najviše piksela po metru
 private const val FIT_MAX_SCALE = 300f
+private const val MAX_ISSUES_SHOWN = 3
 
 /**
  * 2D plan: sobe kao pravougaonici u razmeri.
@@ -92,6 +99,15 @@ fun PlanScreen(
         }
     }
     val overlapping = RoomGeometry.overlappingRoomIds(displayRooms)
+    val walls = SharedWalls.find(displayRooms)
+    val issues = PlanValidator.validate(displayRooms)
+    val wallsWithIssues: Set<SharedWall> = issues.mapNotNull {
+        when (it) {
+            is PlanIssue.WallTooThin -> it.wall
+            is PlanIssue.WallThinnerThanEntered -> it.wall
+            is PlanIssue.RoomsOverlap -> null
+        }
+    }.toSet()
     val selectedRoom = displayRooms.firstOrNull { it.id == selectedId }
 
     val currentRooms by rememberUpdatedState(displayRooms)
@@ -274,6 +290,15 @@ fun PlanScreen(
                     )
                 }
 
+                walls.forEach { wall ->
+                    PlanWall(
+                        wall = wall,
+                        scale = scale,
+                        offset = offset,
+                        hasIssue = wall in wallsWithIssues
+                    )
+                }
+
                 if (rooms != null && rooms.isEmpty()) {
                     Text(
                         text = stringResource(R.string.plan_empty),
@@ -293,9 +318,17 @@ fun PlanScreen(
             }
 
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (overlapping.isNotEmpty()) {
+                issues.take(MAX_ISSUES_SHOWN).forEach { issue ->
                     Text(
-                        text = stringResource(R.string.plan_overlap_warning),
+                        text = issueText(issue, displayRooms),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+                if (issues.size > MAX_ISSUES_SHOWN) {
+                    Text(
+                        text = stringResource(R.string.plan_issue_more, issues.size - MAX_ISSUES_SHOWN),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -341,6 +374,16 @@ fun PlanScreen(
                     Text(
                         text = stringResource(R.string.plan_hint),
                         style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (displayRooms.isNotEmpty()) {
+                    Text(
+                        text = stringResource(
+                            if (issues.isEmpty()) R.string.plan_checked_ok else R.string.plan_checked
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 6.dp)
                     )
                 }
             }
@@ -409,6 +452,74 @@ private fun PlanRoom(
                 overflow = TextOverflow.Ellipsis
             )
         }
+    }
+}
+
+/** Zid između dve susedne sobe: tamna traka na mestu razmaka, sa debljinom u centimetrima. */
+@Composable
+private fun PlanWall(wall: SharedWall, scale: Float, offset: Offset, hasIssue: Boolean) {
+    val density = LocalDensity.current
+    val rect = wall.rect
+    val left = (offset.x + rect.x0 * scale).roundToInt()
+    val top = (offset.y + rect.y0 * scale).roundToInt()
+    // Tanak zid se crta bar 3 piksela široko da ostane vidljiv, iako je u modelu tanji.
+    val widthPx = max(((rect.x1 - rect.x0) * scale).toFloat(), 3f)
+    val heightPx = max(((rect.y1 - rect.y0) * scale).toFloat(), 3f)
+
+    val colors = MaterialTheme.colorScheme
+    val fill = if (hasIssue) colors.error else colors.onSurface.copy(alpha = 0.75f)
+    val longSidePx = if (wall.orientation == WallOrientation.VERTICAL) heightPx else widthPx
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(left, top) }
+            .requiredSize(
+                with(density) { widthPx.toDp() },
+                with(density) { heightPx.toDp() }
+            )
+            .background(fill),
+        contentAlignment = Alignment.Center
+    ) {
+        if (longSidePx >= 70f) {
+            Text(
+                text = stringResource(R.string.plan_wall_label, formatCentimeters(wall.thicknessM)),
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier
+                    .wrapContentSize(unbounded = true)
+                    .background(colors.surface.copy(alpha = 0.85f))
+                    .padding(horizontal = 3.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun issueText(issue: PlanIssue, rooms: List<Room>): String {
+    fun name(id: String): String = rooms.firstOrNull { it.id == id }?.name ?: "?"
+    return when (issue) {
+        is PlanIssue.RoomsOverlap -> stringResource(
+            R.string.plan_issue_overlap,
+            name(issue.roomAId),
+            name(issue.roomBId)
+        )
+
+        is PlanIssue.WallTooThin -> stringResource(
+            R.string.plan_issue_wall_too_thin,
+            name(issue.wall.roomAId),
+            name(issue.wall.roomBId),
+            formatCentimeters(PlanValidator.MIN_WALL_THICKNESS_M)
+        )
+
+        is PlanIssue.WallThinnerThanEntered -> stringResource(
+            R.string.plan_issue_wall_thinner,
+            name(issue.wall.roomAId),
+            name(issue.wall.roomBId),
+            formatCentimeters(issue.wall.thicknessM),
+            name(issue.roomId),
+            formatCentimeters(issue.enteredThicknessM)
+        )
     }
 }
 

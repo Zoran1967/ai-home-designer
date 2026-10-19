@@ -16,6 +16,9 @@ fun formatMeters(value: Double): String = format(value, "0.###")
 /** Površina za prikaz, do dve decimale (npr. 14,4). */
 fun formatArea(value: Double): String = format(value, "0.##")
 
+/** Metri pretvoreni u centimetre za prikaz, do jedne decimale (npr. 0,2 m -> 20). Samo prikaz. */
+fun formatCentimeters(valueM: Double): String = format(valueM * 100.0, "0.#")
+
 /**
  * Tekst za polje za izmenu: tačna vrednost bez zaokruživanja, sa zarezom (npr. 4,5 ili 3,4567).
  * Zaokruživanje ovde bi tiho promenilo sačuvanu meru pri ponovnom čuvanju.

@@ -67,8 +67,17 @@
     <string name="plan_empty">Nema soba za prikaz.</string>
     <string name="plan_grid">Linije mreže: %1$s m</string>
     <string name="plan_room_dimensions">%1$s × %2$s m</string>
-    <string name="plan_hint">Prevucite sobu da je pomerite. Prevlačenje po praznom mestu pomera prikaz, a dva prsta zumiraju. Raspored soba na planu nije izmeren. Provera zidova i prolaza još nije uključena.</string>
+    <string name="plan_hint">Prevucite sobu da je pomerite. Prevlačenje po praznom mestu pomera prikaz, a dva prsta zumiraju. Raspored soba na planu nije izmeren.</string>
     <string name="plan_overlap_warning">Neke sobe se preklapaju (crveni okvir).</string>
     <string name="plan_selected_position">Gornji levi ugao: x = %1$s m, y = %2$s m</string>
     <string name="plan_step">Korak: %1$s cm</string>
+
+    <!-- Zidovi i provera plana -->
+    <string name="plan_wall_label">%1$s cm</string>
+    <string name="plan_issue_overlap">Sobe „%1$s“ i „%2$s“ se preklapaju.</string>
+    <string name="plan_issue_wall_too_thin">Sobe „%1$s“ i „%2$s“ se dodiruju ili je razmak među njima manji od %3$s cm, pa nema mesta za zid.</string>
+    <string name="plan_issue_wall_thinner">Zid između soba „%1$s“ i „%2$s“ je debeo %3$s cm, a za sobu „%4$s“ je uneto %5$s cm.</string>
+    <string name="plan_issue_more">…i još problema: %1$d</string>
+    <string name="plan_checked">Provereno samo: preklapanje soba i debljina zida između susednih soba. Vrata, prozori i nameštaj se još ne proveravaju.</string>
+    <string name="plan_checked_ok">Ove dve provere (preklapanje soba i debljina zida između susednih soba) nisu našle problem. Vrata, prozori i nameštaj se još ne proveravaju.</string>
 </resources>
