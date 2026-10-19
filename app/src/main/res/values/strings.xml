@@ -80,4 +80,10 @@
     <string name="plan_issue_more">…i još problema: %1$d</string>
     <string name="plan_checked">Provereno samo: preklapanje soba i debljina zida između susednih soba. Vrata, prozori i nameštaj se još ne proveravaju.</string>
     <string name="plan_checked_ok">Ove dve provere (preklapanje soba i debljina zida između susednih soba) nisu našle problem. Vrata, prozori i nameštaj se još ne proveravaju.</string>
+
+    <!-- Priljubljivanje sobe -->
+    <string name="plan_snap">Priljubi uz susednu sobu</string>
+    <string name="plan_snap_done">Soba je priljubljena uz „%1$s“. Zid između njih je debeo %2$s cm.</string>
+    <string name="plan_snap_none">Nema susedne sobe dovoljno blizu (do 3 m) koja je okrenuta ovoj sobi. Pomerite sobu bliže nekoj drugoj sobi.</string>
+    <string name="plan_snap_needs_thickness">Da bi se soba priljubila, unesite debljinu zida za nju ili za susednu sobu (dodirnite sobu u listi soba, pa „Izmena sobe“).</string>
 </resources>

@@ -60,6 +60,7 @@ import com.zoran.aihomedesigner.domain.RoomPlacement
 import com.zoran.aihomedesigner.domain.SharedWall
 import com.zoran.aihomedesigner.domain.SharedWalls
 import com.zoran.aihomedesigner.domain.WallOrientation
+import com.zoran.aihomedesigner.domain.WallSnapping
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -89,6 +90,7 @@ fun PlanScreen(
     var dragRoomId by remember { mutableStateOf<String?>(null) }
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var stepM by rememberSaveable { mutableStateOf(0.05) }
+    var snapFeedback by remember { mutableStateOf<SnapFeedback?>(null) }
 
     val point = dragPoint
     val displayRooms = rooms.orEmpty().filter { it.isPlaced }.map { room ->
@@ -112,6 +114,8 @@ fun PlanScreen(
 
     val currentRooms by rememberUpdatedState(displayRooms)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
+
+    LaunchedEffect(selectedId) { snapFeedback = null }
 
     // Sobe koje još nemaju položaj (npr. starije sobe) dobijaju ga pri otvaranju plana.
     LaunchedEffect(rooms) {
@@ -169,6 +173,20 @@ fun PlanScreen(
             RoomPlacement.roundToMm(room.xM!! + dx),
             RoomPlacement.roundToMm(room.yM!! + dy)
         )
+    }
+
+    fun snapSelected() {
+        val room = selectedRoom ?: return
+        when (val result = WallSnapping.snap(displayRooms, room.id)) {
+            is WallSnapping.Result.Moved -> {
+                onMoveRoom(room.id, result.position.xM, result.position.yM)
+                val neighborName = displayRooms.firstOrNull { it.id == result.neighborId }?.name ?: "?"
+                snapFeedback = SnapFeedback.Moved(neighborName, result.thicknessM)
+            }
+
+            WallSnapping.Result.NoNeighborNearby -> snapFeedback = SnapFeedback.NoNeighbor
+            WallSnapping.Result.NeedsThickness -> snapFeedback = SnapFeedback.NeedsThickness
+        }
     }
 
     val gridColor = MaterialTheme.colorScheme.outlineVariant
@@ -368,6 +386,19 @@ fun PlanScreen(
                                     )
                                 }
                             }
+                            OutlinedButton(
+                                onClick = { snapSelected() },
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Text(stringResource(R.string.plan_snap))
+                            }
+                            snapFeedback?.let { feedback ->
+                                Text(
+                                    text = snapFeedbackText(feedback),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                         }
                     }
                 } else {
@@ -521,6 +552,25 @@ private fun issueText(issue: PlanIssue, rooms: List<Room>): String {
             formatCentimeters(issue.enteredThicknessM)
         )
     }
+}
+
+/** Ishod poslednjeg pokušaja priljubljivanja, za poruku ispod dugmeta. */
+private sealed interface SnapFeedback {
+    data class Moved(val neighborName: String, val thicknessM: Double) : SnapFeedback
+    data object NoNeighbor : SnapFeedback
+    data object NeedsThickness : SnapFeedback
+}
+
+@Composable
+private fun snapFeedbackText(feedback: SnapFeedback): String = when (feedback) {
+    is SnapFeedback.Moved -> stringResource(
+        R.string.plan_snap_done,
+        feedback.neighborName,
+        formatCentimeters(feedback.thicknessM)
+    )
+
+    SnapFeedback.NoNeighbor -> stringResource(R.string.plan_snap_none)
+    SnapFeedback.NeedsThickness -> stringResource(R.string.plan_snap_needs_thickness)
 }
 
 /** Razmak linija mreže u metrima: najmanji od ponuđenih koji je na ekranu bar oko 40 piksela. */
