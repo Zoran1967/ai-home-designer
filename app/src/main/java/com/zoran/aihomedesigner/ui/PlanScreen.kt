@@ -94,13 +94,15 @@ fun PlanScreen(
     furniture: List<Furniture> = emptyList(),
     onBack: () -> Unit,
     onMoveRoom: (String, Double, Double) -> Unit,
-    onPlaceUnplaced: () -> Unit
+    onPlaceUnplaced: () -> Unit,
+    onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> }
 ) {
     var scale by remember { mutableFloatStateOf(60f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var fitted by remember { mutableStateOf(false) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
     var dragRoomId by remember { mutableStateOf<String?>(null) }
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var stepM by rememberSaveable { mutableStateOf(0.05) }
@@ -125,8 +127,12 @@ fun PlanScreen(
         }
     }.toSet()
     val selectedRoom = displayRooms.firstOrNull { it.id == selectedId }
+    val selectedFurniture = furniture.firstOrNull { item ->
+        item.id == selectedFurnitureId && displayRooms.any { it.id == item.roomId }
+    }
 
     val currentRooms by rememberUpdatedState(displayRooms)
+    val currentFurniture by rememberUpdatedState(furniture)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
 
     LaunchedEffect(selectedId) { snapFeedback = null }
@@ -186,6 +192,19 @@ fun PlanScreen(
             room.id,
             RoomPlacement.roundToMm(room.xM!! + dx),
             RoomPlacement.roundToMm(room.yM!! + dy)
+        )
+    }
+
+    fun nudgeFurniture(dx: Double, dy: Double) {
+        val item = selectedFurniture ?: return
+        val room = displayRooms.firstOrNull { it.id == item.roomId } ?: return
+        val maxX = max(0.0, room.lengthM - item.footprintLengthM)
+        val maxY = max(0.0, room.widthM - item.footprintWidthM)
+        onMoveFurniture(
+            item.id,
+            RoomPlacement.roundToMm((item.xM + dx).coerceIn(0.0, maxX)),
+            RoomPlacement.roundToMm((item.yM + dy).coerceIn(0.0, maxY)),
+            item.rotationDeg
         )
     }
 
@@ -290,6 +309,7 @@ fun PlanScreen(
                                             dragRoomId = id
                                             dragPoint = PlanPoint(nx, ny)
                                             selectedId = id
+                                            selectedFurnitureId = null
                                         } else {
                                             offset = startOffset + total
                                         }
@@ -300,7 +320,23 @@ fun PlanScreen(
 
                             if (!multiTouch) {
                                 if (!moved) {
-                                    selectedId = hit?.id
+                                    val hitFurniture = currentFurniture.lastOrNull { item ->
+                                        val itemRoom = currentRooms.firstOrNull { it.id == item.roomId }
+                                            ?: return@lastOrNull false
+                                        val left = startOffset.x + (itemRoom.xM!! + item.xM) * startScale
+                                        val top = startOffset.y + (itemRoom.yM!! + item.yM) * startScale
+                                        startPos.x >= left &&
+                                            startPos.x <= left + item.footprintLengthM * startScale &&
+                                            startPos.y >= top &&
+                                            startPos.y <= top + item.footprintWidthM * startScale
+                                    }
+                                    if (hitFurniture != null) {
+                                        selectedFurnitureId = hitFurniture.id
+                                        selectedId = null
+                                    } else {
+                                        selectedFurnitureId = null
+                                        selectedId = hit?.id
+                                    }
                                 } else {
                                     val id = draggingId
                                     val p = dragPoint
@@ -335,7 +371,13 @@ fun PlanScreen(
                 furniture.forEach { item ->
                     val room = roomsById[item.roomId]
                     if (room != null) {
-                        PlanFurniture(furniture = item, room = room, scale = scale, offset = offset)
+                        PlanFurniture(
+                            furniture = item,
+                            room = room,
+                            scale = scale,
+                            offset = offset,
+                            selected = item.id == selectedFurnitureId
+                        )
                     }
                 }
 
@@ -428,7 +470,43 @@ fun PlanScreen(
                     )
                 }
 
-                if (selectedRoom != null) {
+                if (selectedFurniture != null) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = selectedFurniture.name,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.plan_selected_position,
+                                    formatMeters(selectedFurniture.xM),
+                                    formatMeters(selectedFurniture.yM)
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                NudgeButton("←") { nudgeFurniture(-stepM, 0.0) }
+                                NudgeButton("→") { nudgeFurniture(stepM, 0.0) }
+                                NudgeButton("↑") { nudgeFurniture(0.0, -stepM) }
+                                NudgeButton("↓") { nudgeFurniture(0.0, stepM) }
+                                TextButton(onClick = {
+                                    stepM = if (stepM < 0.1) 0.5 else 0.05
+                                }) {
+                                    Text(
+                                        stringResource(
+                                            R.string.plan_step,
+                                            (stepM * 100).roundToInt().toString()
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (selectedRoom != null) {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
@@ -635,7 +713,13 @@ private fun issueText(issue: PlanIssue, rooms: List<Room>): String {
  * unutrašnjosti sobe, pa se nameštaj pomera zajedno sa sobom. Dužina i širina se menjaju za 90 i 270 stepeni.
  */
 @Composable
-private fun PlanFurniture(furniture: Furniture, room: Room, scale: Float, offset: Offset) {
+private fun PlanFurniture(
+    furniture: Furniture,
+    room: Room,
+    scale: Float,
+    offset: Offset,
+    selected: Boolean
+) {
     val density = LocalDensity.current
     val left = (offset.x + (room.xM!! + furniture.xM) * scale).roundToInt()
     val top = (offset.y + (room.yM!! + furniture.yM) * scale).roundToInt()
@@ -653,7 +737,7 @@ private fun PlanFurniture(furniture: Furniture, room: Room, scale: Float, offset
             )
             .clipToBounds()
             .background(colors.tertiaryContainer.copy(alpha = 0.85f))
-            .border(1.5.dp, colors.tertiary)
+            .border(if (selected) 3.dp else 1.5.dp, if (selected) colors.primary else colors.tertiary)
             .padding(2.dp)
     ) {
         Text(
