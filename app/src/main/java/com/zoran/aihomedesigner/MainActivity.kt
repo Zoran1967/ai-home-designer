@@ -216,7 +216,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 furniture = projectFurniture.orEmpty(),
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
-                onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) }
+                onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) },
+                onMoveFurniture = { id, x, y, rotation -> viewModel.moveFurniture(id, x, y, rotation) }
             )
         }
 
