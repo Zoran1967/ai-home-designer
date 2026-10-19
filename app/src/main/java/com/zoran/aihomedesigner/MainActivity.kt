@@ -110,6 +110,11 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     }
     val projectOpenings by projectOpeningsFlow.collectAsState(initial = null)
 
+    val projectFurnitureFlow = remember(selectedProjectId) {
+        selectedProjectId?.let { viewModel.observeProjectFurniture(it) } ?: flowOf<List<Furniture>?>(null)
+    }
+    val projectFurniture by projectFurnitureFlow.collectAsState(initial = null)
+
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
             Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.OPENINGS, Screen.FURNITURE -> Screen.ROOMS
@@ -208,6 +213,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
             PlanScreen(
                 rooms = rooms,
                 openings = projectOpenings.orEmpty(),
+                furniture = projectFurniture.orEmpty(),
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) }
