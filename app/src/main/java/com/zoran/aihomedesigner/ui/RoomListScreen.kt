@@ -41,6 +41,7 @@ fun RoomListScreen(
     onOpenRoom: (Room) -> Unit,
     onOpenPlan: () -> Unit,
     onOpenOpenings: (Room) -> Unit,
+    onOpenFurniture: (Room) -> Unit,
     onDeleteRoom: (Room) -> Unit
 ) {
     var roomToDelete by remember { mutableStateOf<Room?>(null) }
@@ -108,6 +109,7 @@ fun RoomListScreen(
                                 room = room,
                                 onOpen = { onOpenRoom(room) },
                                 onOpenOpenings = { onOpenOpenings(room) },
+                                onOpenFurniture = { onOpenFurniture(room) },
                                 onDelete = { roomToDelete = room }
                             )
                         }
@@ -142,6 +144,7 @@ private fun RoomCard(
     room: Room,
     onOpen: () -> Unit,
     onOpenOpenings: () -> Unit,
+    onOpenFurniture: () -> Unit,
     onDelete: () -> Unit
 ) {
     val thickness = room.wallThicknessM
@@ -183,6 +186,9 @@ private fun RoomCard(
                 )
                 TextButton(onClick = onOpenOpenings) {
                     Text(stringResource(R.string.room_openings_button))
+                }
+                TextButton(onClick = onOpenFurniture) {
+                    Text(stringResource(R.string.room_furniture_button))
                 }
             }
             TextButton(onClick = onDelete) {

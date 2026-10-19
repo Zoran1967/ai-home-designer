@@ -17,10 +17,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zoran.aihomedesigner.domain.Furniture
+import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.ui.CrashScreen
 import com.zoran.aihomedesigner.ui.CreateProjectScreen
+import com.zoran.aihomedesigner.ui.FurnitureFormScreen
+import com.zoran.aihomedesigner.ui.FurnitureListScreen
 import com.zoran.aihomedesigner.ui.OpeningFormScreen
 import com.zoran.aihomedesigner.ui.OpeningListScreen
 import com.zoran.aihomedesigner.ui.PlanScreen
@@ -39,7 +43,10 @@ private enum class Screen {
     PLAN,
     OPENINGS,
     CREATE_OPENING,
-    EDIT_OPENING
+    EDIT_OPENING,
+    FURNITURE,
+    CREATE_FURNITURE,
+    EDIT_FURNITURE
 }
 
 class MainActivity : ComponentActivity() {
@@ -74,6 +81,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     var selectedProjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedRoomId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedOpeningId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val projects by viewModel.projects.collectAsState()
     val selectedProject = projects?.firstOrNull { it.id == selectedProjectId }
@@ -91,6 +99,12 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     val roomOpenings by roomOpeningsFlow.collectAsState(initial = null)
     val openingToEdit = roomOpenings?.firstOrNull { it.id == selectedOpeningId }
 
+    val roomFurnitureFlow = remember(selectedRoomId) {
+        selectedRoomId?.let { viewModel.observeFurniture(it) } ?: flowOf<List<Furniture>?>(null)
+    }
+    val roomFurniture by roomFurnitureFlow.collectAsState(initial = null)
+    val furnitureToEdit = roomFurniture?.firstOrNull { it.id == selectedFurnitureId }
+
     val projectOpeningsFlow = remember(selectedProjectId) {
         selectedProjectId?.let { viewModel.observeProjectOpenings(it) } ?: flowOf<List<Opening>?>(null)
     }
@@ -98,8 +112,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
-            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.OPENINGS -> Screen.ROOMS
+            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.OPENINGS, Screen.FURNITURE -> Screen.ROOMS
             Screen.CREATE_OPENING, Screen.EDIT_OPENING -> Screen.OPENINGS
+            Screen.CREATE_FURNITURE, Screen.EDIT_FURNITURE -> Screen.FURNITURE
             else -> {
                 selectedProjectId = null
                 Screen.PROJECTS
@@ -108,10 +123,14 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     }
 
     // Ako je izabrani projekat, soba ili otvor nestao (npr. obrisan), vrati se korak nazad.
-    LaunchedEffect(projects, rooms, roomOpenings, selectedProjectId, selectedRoomId, selectedOpeningId, screen) {
+    LaunchedEffect(
+        projects, rooms, roomOpenings, roomFurniture,
+        selectedProjectId, selectedRoomId, selectedOpeningId, selectedFurnitureId, screen
+    ) {
         val needsProject = screen != Screen.PROJECTS && screen != Screen.CREATE_PROJECT
         val needsRoom = screen == Screen.EDIT_ROOM || screen == Screen.OPENINGS ||
-            screen == Screen.CREATE_OPENING || screen == Screen.EDIT_OPENING
+            screen == Screen.CREATE_OPENING || screen == Screen.EDIT_OPENING ||
+            screen == Screen.FURNITURE || screen == Screen.CREATE_FURNITURE || screen == Screen.EDIT_FURNITURE
         if (needsProject && projects != null && selectedProject == null) {
             selectedProjectId = null
             screen = Screen.PROJECTS
@@ -119,6 +138,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
             screen = Screen.ROOMS
         } else if (screen == Screen.EDIT_OPENING && roomOpenings != null && openingToEdit == null) {
             screen = Screen.OPENINGS
+        } else if (screen == Screen.EDIT_FURNITURE && roomFurniture != null && furnitureToEdit == null) {
+            screen = Screen.FURNITURE
         }
     }
 
@@ -156,6 +177,10 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onOpenOpenings = {
                     selectedRoomId = it.id
                     screen = Screen.OPENINGS
+                },
+                onOpenFurniture = {
+                    selectedRoomId = it.id
+                    screen = Screen.FURNITURE
                 },
                 onDeleteRoom = { viewModel.deleteRoom(it.id) }
             )
@@ -223,6 +248,49 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     onSubmit = { input, onResult -> viewModel.updateOpening(opening.id, input, onResult) },
                     onDone = { screen = Screen.OPENINGS },
                     onCancel = { screen = Screen.OPENINGS }
+                )
+            }
+        }
+
+        Screen.FURNITURE -> selectedRoom?.let { room ->
+            FurnitureListScreen(
+                room = room,
+                furniture = roomFurniture,
+                issues = FurnitureLayoutValidator.validate(
+                    room,
+                    roomFurniture.orEmpty(),
+                    roomOpenings.orEmpty()
+                ),
+                onBack = { screen = Screen.ROOMS },
+                onAdd = { screen = Screen.CREATE_FURNITURE },
+                onOpen = {
+                    selectedFurnitureId = it.id
+                    screen = Screen.EDIT_FURNITURE
+                },
+                onDelete = { viewModel.deleteFurniture(it.id) }
+            )
+        }
+
+        Screen.CREATE_FURNITURE -> selectedRoom?.let { room ->
+            FurnitureFormScreen(
+                room = room,
+                initialFurniture = null,
+                onSubmit = { input, onResult -> viewModel.createFurniture(room.id, input, onResult) },
+                onDone = { screen = Screen.FURNITURE },
+                onCancel = { screen = Screen.FURNITURE }
+            )
+        }
+
+        Screen.EDIT_FURNITURE -> {
+            val room = selectedRoom
+            val item = furnitureToEdit
+            if (room != null && item != null) {
+                FurnitureFormScreen(
+                    room = room,
+                    initialFurniture = item,
+                    onSubmit = { input, onResult -> viewModel.updateFurniture(item.id, input, onResult) },
+                    onDone = { screen = Screen.FURNITURE },
+                    onCancel = { screen = Screen.FURNITURE }
                 )
             }
         }
