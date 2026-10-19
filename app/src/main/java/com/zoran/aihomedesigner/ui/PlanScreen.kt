@@ -334,7 +334,7 @@ fun PlanScreen(
                 if (openings.isNotEmpty()) {
                     Row(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
+                            .align(Alignment.TopEnd)
                             .padding(8.dp)
                     ) {
                         Text(
@@ -364,8 +364,26 @@ fun PlanScreen(
                     text = stringResource(R.string.plan_grid, formatMeters(gridStep.toDouble())),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
+                        .align(Alignment.TopStart)
                         .padding(8.dp)
+                )
+
+                // Strane sveta uz ivice prikaza, izvan crteža kuće ili stana.
+                CompassLabel(
+                    text = stringResource(R.string.compass_north),
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+                CompassLabel(
+                    text = stringResource(R.string.compass_south),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+                CompassLabel(
+                    text = stringResource(R.string.compass_west),
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+                CompassLabel(
+                    text = stringResource(R.string.compass_east),
+                    modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }
 
@@ -624,6 +642,21 @@ private fun PlanOpening(opening: Opening, room: Room, scale: Float, offset: Offs
                 with(density) { h.toDp() }
             )
             .background(if (opening.type == OpeningType.DOOR) DoorColor else WindowColor)
+    )
+}
+
+/** Oznaka strane sveta, sa providnom pozadinom da ne zaklanja sobe. */
+@Composable
+private fun CompassLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier = modifier
+            .padding(4.dp)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
     )
 }
 

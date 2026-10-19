@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Strane sveta na planu: sever je gore, kao u ostatku aplikacije. -->
+    <string name="compass_north">↑ SEVER</string>
+    <string name="compass_south">↓ JUG</string>
+    <string name="compass_east">ISTOK →</string>
+    <string name="compass_west">← ZAPAD</string>
+</resources>
