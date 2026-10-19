@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
 import com.zoran.aihomedesigner.domain.DoorSwingGeometry
 import com.zoran.aihomedesigner.domain.DoorSwingShape
+import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
@@ -90,6 +91,7 @@ private val WindowColor = Color(0xFF1E88E5)
 fun PlanScreen(
     rooms: List<Room>?,
     openings: List<Opening>,
+    furniture: List<Furniture> = emptyList(),
     onBack: () -> Unit,
     onMoveRoom: (String, Double, Double) -> Unit,
     onPlaceUnplaced: () -> Unit
@@ -330,6 +332,13 @@ fun PlanScreen(
                 }
 
                 val roomsById = displayRooms.associateBy { it.id }
+                furniture.forEach { item ->
+                    val room = roomsById[item.roomId]
+                    if (room != null) {
+                        PlanFurniture(furniture = item, room = room, scale = scale, offset = offset)
+                    }
+                }
+
                 openings.forEach { opening ->
                     val room = roomsById[opening.roomId]
                     if (room != null) {
@@ -617,6 +626,41 @@ private fun issueText(issue: PlanIssue, rooms: List<Room>): String {
             formatCentimeters(issue.wall.thicknessM),
             name(issue.roomId),
             formatCentimeters(issue.enteredThicknessM)
+        )
+    }
+}
+
+/**
+ * Komad nameštaja kao pravougaonik u razmeri, unutar sobe. Položaj se meri od gornjeg levog ugla
+ * unutrašnjosti sobe, pa se nameštaj pomera zajedno sa sobom. Dužina i širina se menjaju za 90 i 270 stepeni.
+ */
+@Composable
+private fun PlanFurniture(furniture: Furniture, room: Room, scale: Float, offset: Offset) {
+    val density = LocalDensity.current
+    val left = (offset.x + (room.xM!! + furniture.xM) * scale).roundToInt()
+    val top = (offset.y + (room.yM!! + furniture.yM) * scale).roundToInt()
+    val widthPx = (furniture.footprintLengthM * scale).toFloat()
+    val heightPx = (furniture.footprintWidthM * scale).toFloat()
+
+    val colors = MaterialTheme.colorScheme
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(left, top) }
+            .requiredSize(
+                with(density) { widthPx.toDp() },
+                with(density) { heightPx.toDp() }
+            )
+            .clipToBounds()
+            .background(colors.tertiaryContainer.copy(alpha = 0.85f))
+            .border(1.5.dp, colors.tertiary)
+            .padding(2.dp)
+    ) {
+        Text(
+            text = furniture.name,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
