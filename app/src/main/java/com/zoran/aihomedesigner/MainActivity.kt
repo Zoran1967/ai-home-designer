@@ -17,9 +17,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.ui.CrashScreen
 import com.zoran.aihomedesigner.ui.CreateProjectScreen
+import com.zoran.aihomedesigner.ui.OpeningFormScreen
+import com.zoran.aihomedesigner.ui.OpeningListScreen
 import com.zoran.aihomedesigner.ui.PlanScreen
 import com.zoran.aihomedesigner.ui.ProjectListScreen
 import com.zoran.aihomedesigner.ui.ProjectsViewModel
@@ -27,7 +30,17 @@ import com.zoran.aihomedesigner.ui.RoomFormScreen
 import com.zoran.aihomedesigner.ui.RoomListScreen
 import kotlinx.coroutines.flow.flowOf
 
-private enum class Screen { PROJECTS, CREATE_PROJECT, ROOMS, CREATE_ROOM, EDIT_ROOM, PLAN }
+private enum class Screen {
+    PROJECTS,
+    CREATE_PROJECT,
+    ROOMS,
+    CREATE_ROOM,
+    EDIT_ROOM,
+    PLAN,
+    OPENINGS,
+    CREATE_OPENING,
+    EDIT_OPENING
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +73,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     var screen by rememberSaveable { mutableStateOf(Screen.PROJECTS) }
     var selectedProjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedRoomId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedOpeningId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val projects by viewModel.projects.collectAsState()
     val selectedProject = projects?.firstOrNull { it.id == selectedProjectId }
@@ -68,11 +82,24 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         selectedProjectId?.let { viewModel.observeRooms(it) } ?: flowOf<List<Room>?>(null)
     }
     val rooms by roomsFlow.collectAsState(initial = null)
-    val roomToEdit = rooms?.firstOrNull { it.id == selectedRoomId }
+    val selectedRoom = rooms?.firstOrNull { it.id == selectedRoomId }
+
+    // Otvori izabrane sobe (za ekran vrata i prozora) i svi otvori projekta (za plan).
+    val roomOpeningsFlow = remember(selectedRoomId) {
+        selectedRoomId?.let { viewModel.observeOpenings(it) } ?: flowOf<List<Opening>?>(null)
+    }
+    val roomOpenings by roomOpeningsFlow.collectAsState(initial = null)
+    val openingToEdit = roomOpenings?.firstOrNull { it.id == selectedOpeningId }
+
+    val projectOpeningsFlow = remember(selectedProjectId) {
+        selectedProjectId?.let { viewModel.observeProjectOpenings(it) } ?: flowOf<List<Opening>?>(null)
+    }
+    val projectOpenings by projectOpeningsFlow.collectAsState(initial = null)
 
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
-            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN -> Screen.ROOMS
+            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.OPENINGS -> Screen.ROOMS
+            Screen.CREATE_OPENING, Screen.EDIT_OPENING -> Screen.OPENINGS
             else -> {
                 selectedProjectId = null
                 Screen.PROJECTS
@@ -80,15 +107,18 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         }
     }
 
-    // Ako je izabrani projekat ili soba nestala (npr. obrisana), vrati se korak nazad.
-    LaunchedEffect(projects, rooms, selectedProjectId, selectedRoomId, screen) {
-        val needsProject = screen == Screen.ROOMS || screen == Screen.CREATE_ROOM ||
-            screen == Screen.EDIT_ROOM || screen == Screen.PLAN
+    // Ako je izabrani projekat, soba ili otvor nestao (npr. obrisan), vrati se korak nazad.
+    LaunchedEffect(projects, rooms, roomOpenings, selectedProjectId, selectedRoomId, selectedOpeningId, screen) {
+        val needsProject = screen != Screen.PROJECTS && screen != Screen.CREATE_PROJECT
+        val needsRoom = screen == Screen.EDIT_ROOM || screen == Screen.OPENINGS ||
+            screen == Screen.CREATE_OPENING || screen == Screen.EDIT_OPENING
         if (needsProject && projects != null && selectedProject == null) {
             selectedProjectId = null
             screen = Screen.PROJECTS
-        } else if (screen == Screen.EDIT_ROOM && rooms != null && roomToEdit == null) {
+        } else if (needsRoom && rooms != null && selectedRoom == null) {
             screen = Screen.ROOMS
+        } else if (screen == Screen.EDIT_OPENING && roomOpenings != null && openingToEdit == null) {
+            screen = Screen.OPENINGS
         }
     }
 
@@ -123,6 +153,10 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     screen = Screen.EDIT_ROOM
                 },
                 onOpenPlan = { screen = Screen.PLAN },
+                onOpenOpenings = {
+                    selectedRoomId = it.id
+                    screen = Screen.OPENINGS
+                },
                 onDeleteRoom = { viewModel.deleteRoom(it.id) }
             )
         }
@@ -136,7 +170,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
             )
         }
 
-        Screen.EDIT_ROOM -> roomToEdit?.let { room ->
+        Screen.EDIT_ROOM -> selectedRoom?.let { room ->
             RoomFormScreen(
                 initialRoom = room,
                 onSubmit = { input, onResult -> viewModel.updateRoom(room.id, input, onResult) },
@@ -148,10 +182,49 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         Screen.PLAN -> selectedProject?.let { project ->
             PlanScreen(
                 rooms = rooms,
+                openings = projectOpenings.orEmpty(),
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) }
             )
+        }
+
+        Screen.OPENINGS -> selectedRoom?.let { room ->
+            OpeningListScreen(
+                room = room,
+                openings = roomOpenings,
+                onBack = { screen = Screen.ROOMS },
+                onAdd = { screen = Screen.CREATE_OPENING },
+                onOpen = {
+                    selectedOpeningId = it.id
+                    screen = Screen.EDIT_OPENING
+                },
+                onDelete = { viewModel.deleteOpening(it.id) }
+            )
+        }
+
+        Screen.CREATE_OPENING -> selectedRoom?.let { room ->
+            OpeningFormScreen(
+                room = room,
+                initialOpening = null,
+                onSubmit = { input, onResult -> viewModel.createOpening(room.id, input, onResult) },
+                onDone = { screen = Screen.OPENINGS },
+                onCancel = { screen = Screen.OPENINGS }
+            )
+        }
+
+        Screen.EDIT_OPENING -> {
+            val room = selectedRoom
+            val opening = openingToEdit
+            if (room != null && opening != null) {
+                OpeningFormScreen(
+                    room = room,
+                    initialOpening = opening,
+                    onSubmit = { input, onResult -> viewModel.updateOpening(opening.id, input, onResult) },
+                    onDone = { screen = Screen.OPENINGS },
+                    onCancel = { screen = Screen.OPENINGS }
+                )
+            }
         }
     }
 }

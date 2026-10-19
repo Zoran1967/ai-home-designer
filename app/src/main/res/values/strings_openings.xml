@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lista soba -->
+    <string name="room_openings_button">Vrata i prozori</string>
+
+    <!-- Lista otvora -->
+    <string name="openings_title">Vrata i prozori</string>
+    <string name="openings_empty">U ovoj sobi još nema vrata ni prozora. Dodirnite „Dodaj“ da dodate prvi.</string>
+    <string name="opening_add">Dodaj</string>
+    <string name="openings_walls_info">Severni i južni zid su dugi %1$s m, a istočni i zapadni %2$s m. Strane su kao na planu: sever je gore.</string>
+    <string name="openings_tap_to_edit">Dodirnite vrata ili prozor da ih izmenite.</string>
+    <string name="delete_opening_title">Brisanje otvora</string>
+    <string name="delete_opening_message">Obrisati „%1$s“ sa zida „%2$s“? Ovo se ne može poništiti.</string>
+
+    <string name="opening_door">Vrata</string>
+    <string name="opening_window">Prozor</string>
+    <string name="opening_title_line">%1$s · %2$s</string>
+    <string name="opening_size_line">Širina %1$s m, visina %2$s m</string>
+    <string name="opening_position_line">Počinje %1$s m od %2$s</string>
+    <string name="opening_sill_line">Donja ivica je %1$s m od poda</string>
+
+    <string name="side_north">Severni zid (gore)</string>
+    <string name="side_east">Istočni zid (desno)</string>
+    <string name="side_south">Južni zid (dole)</string>
+    <string name="side_west">Zapadni zid (levo)</string>
+    <string name="start_west">zapadnog (levog) ugla</string>
+    <string name="start_north">severnog (gornjeg) ugla</string>
+
+    <string name="swing_into_room">Otvaraju se u sobu</string>
+    <string name="swing_out_of_room">Otvaraju se iz sobe (napolje)</string>
+    <string name="swing_sliding">Klizna vrata</string>
+    <string name="hinge_left">Šarke su na levom kraju zida</string>
+    <string name="hinge_right">Šarke su na desnom kraju zida</string>
+    <string name="hinge_top">Šarke su na gornjem kraju zida</string>
+    <string name="hinge_bottom">Šarke su na donjem kraju zida</string>
+
+    <!-- Obrazac -->
+    <string name="create_opening_title">Novi otvor</string>
+    <string name="edit_opening_title">Izmena otvora</string>
+    <string name="label_opening_type">Šta dodajete</string>
+    <string name="label_opening_wall">Na kom zidu</string>
+    <string name="label_opening_swing">Kako se vrata otvaraju</string>
+    <string name="label_opening_hinge">Strana šarki</string>
+    <string name="field_opening_offset">Položaj duž zida (m)</string>
+    <string name="field_opening_width">Širina (m)</string>
+    <string name="field_opening_height">Visina (m)</string>
+    <string name="field_opening_sill">Visina donje ivice od poda (m)</string>
+    <string name="hint_opening_offset">Rastojanje od %1$s sobe do bliže ivice otvora. Zid je dug %2$s m.</string>
+    <string name="hint_opening_width">Na primer: 0,9</string>
+    <string name="hint_opening_height">Na primer: 2,05</string>
+    <string name="hint_opening_sill">Na primer: 0,9. Ako je prozor do poda, upišite 0.</string>
+
+    <string name="error_opening_exceeds_wall">Otvor ne staje u zid (zid je dug %1$s m). Smanjite širinu ili položaj.</string>
+    <string name="error_opening_too_tall">Otvor je previsok za ovu sobu (visina zida sobe je %1$s m).</string>
+    <string name="error_opening_overlaps">Otvor se preklapa sa drugim otvorom na istom zidu.</string>
+    <string name="error_opening_swing_missing">Izaberite kako se vrata otvaraju.</string>
+    <string name="error_opening_hinge_missing">Izaberite na kojoj su strani šarke.</string>
+
+    <!-- Plan -->
+    <string name="plan_legend_doors">■ Vrata</string>
+    <string name="plan_legend_windows">■ Prozori</string>
+</resources>

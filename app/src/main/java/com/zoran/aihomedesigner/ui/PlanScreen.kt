@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
+import com.zoran.aihomedesigner.domain.Opening
+import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
 import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.PlanValidator
@@ -60,6 +62,7 @@ import com.zoran.aihomedesigner.domain.RoomPlacement
 import com.zoran.aihomedesigner.domain.SharedWall
 import com.zoran.aihomedesigner.domain.SharedWalls
 import com.zoran.aihomedesigner.domain.WallOrientation
+import com.zoran.aihomedesigner.domain.WallSide
 import com.zoran.aihomedesigner.domain.WallSnapping
 import kotlin.math.max
 import kotlin.math.min
@@ -69,6 +72,8 @@ private const val MIN_SCALE = 8f   // najmanje piksela po metru
 private const val MAX_SCALE = 600f // najviše piksela po metru
 private const val FIT_MAX_SCALE = 300f
 private const val MAX_ISSUES_SHOWN = 3
+private val DoorColor = Color(0xFF8D6E63)
+private val WindowColor = Color(0xFF1E88E5)
 
 /**
  * 2D plan: sobe kao pravougaonici u razmeri.
@@ -78,6 +83,7 @@ private const val MAX_ISSUES_SHOWN = 3
 @Composable
 fun PlanScreen(
     rooms: List<Room>?,
+    openings: List<Opening>,
     onBack: () -> Unit,
     onMoveRoom: (String, Double, Double) -> Unit,
     onPlaceUnplaced: () -> Unit
@@ -317,6 +323,34 @@ fun PlanScreen(
                     )
                 }
 
+                val roomsById = displayRooms.associateBy { it.id }
+                openings.forEach { opening ->
+                    val room = roomsById[opening.roomId]
+                    if (room != null) {
+                        PlanOpening(opening = opening, room = room, scale = scale, offset = offset)
+                    }
+                }
+
+                if (openings.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.plan_legend_doors),
+                            color = DoorColor,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.plan_legend_windows),
+                            color = WindowColor,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+
                 if (rooms != null && rooms.isEmpty()) {
                     Text(
                         text = stringResource(R.string.plan_empty),
@@ -552,6 +586,45 @@ private fun issueText(issue: PlanIssue, rooms: List<Room>): String {
             formatCentimeters(issue.enteredThicknessM)
         )
     }
+}
+
+/**
+ * Vrata (smeđa) i prozor (plava) kao traka na zidu sobe, na mestu koje je korisnik uneo.
+ * Smer otvaranja vrata se za sada ne crta.
+ */
+@Composable
+private fun PlanOpening(opening: Opening, room: Room, scale: Float, offset: Offset) {
+    val density = LocalDensity.current
+    val thickness = with(density) { 6.dp.toPx() }
+
+    val roomLeft = offset.x + (room.xM!! * scale).toFloat()
+    val roomTop = offset.y + (room.yM!! * scale).toFloat()
+    val roomRight = roomLeft + (room.lengthM * scale).toFloat()
+    val roomBottom = roomTop + (room.widthM * scale).toFloat()
+    val start = (opening.offsetM * scale).toFloat()
+    val length = max((opening.widthM * scale).toFloat(), 3f)
+
+    // x, y, širina i visina trake u pikselima
+    val box: List<Float> = when (opening.side) {
+        WallSide.NORTH -> listOf(roomLeft + start, roomTop - thickness / 2, length, thickness)
+        WallSide.SOUTH -> listOf(roomLeft + start, roomBottom - thickness / 2, length, thickness)
+        WallSide.WEST -> listOf(roomLeft - thickness / 2, roomTop + start, thickness, length)
+        WallSide.EAST -> listOf(roomRight - thickness / 2, roomTop + start, thickness, length)
+    }
+    val x = box[0]
+    val y = box[1]
+    val w = box[2]
+    val h = box[3]
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+            .requiredSize(
+                with(density) { w.toDp() },
+                with(density) { h.toDp() }
+            )
+            .background(if (opening.type == OpeningType.DOOR) DoorColor else WindowColor)
+    )
 }
 
 /** Ishod poslednjeg pokušaja priljubljivanja, za poruku ispod dugmeta. */
