@@ -1,5 +1,6 @@
 package com.zoran.aihomedesigner.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -39,8 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
@@ -51,6 +54,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
+import com.zoran.aihomedesigner.domain.DoorSwingGeometry
+import com.zoran.aihomedesigner.domain.DoorSwingShape
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
@@ -64,6 +69,7 @@ import com.zoran.aihomedesigner.domain.SharedWalls
 import com.zoran.aihomedesigner.domain.WallOrientation
 import com.zoran.aihomedesigner.domain.WallSide
 import com.zoran.aihomedesigner.domain.WallSnapping
+import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -328,6 +334,15 @@ fun PlanScreen(
                     val room = roomsById[opening.roomId]
                     if (room != null) {
                         PlanOpening(opening = opening, room = room, scale = scale, offset = offset)
+                    }
+                }
+
+                // Luk otvaranja vrata (bez prozora i kliznih vrata)
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    openings.forEach { opening ->
+                        val room = roomsById[opening.roomId] ?: return@forEach
+                        val shape = DoorSwingGeometry.shape(opening, room) ?: return@forEach
+                        drawDoorSwing(shape, scale, offset, DoorColor)
                     }
                 }
 
@@ -643,6 +658,41 @@ private fun PlanOpening(opening: Opening, room: Room, scale: Float, offset: Offs
             )
             .background(if (opening.type == OpeningType.DOOR) DoorColor else WindowColor)
     )
+}
+
+/** Crta list vrata u otvorenom položaju i luk po kome se vrata otvaraju, oko tačke šarki. */
+private fun DrawScope.drawDoorSwing(shape: DoorSwingShape, scale: Float, offset: Offset, color: Color) {
+    fun px(p: PlanPoint) = Offset(
+        offset.x + (p.xM * scale).toFloat(),
+        offset.y + (p.yM * scale).toFloat()
+    )
+
+    val hinge = px(shape.hinge)
+    val closed = px(shape.closedEnd)
+    val open = px(shape.openEnd)
+    val radius = (shape.radiusM * scale).toFloat()
+    if (radius < 2f) return
+
+    val startAngle = Math.toDegrees(
+        atan2((closed.y - hinge.y).toDouble(), (closed.x - hinge.x).toDouble())
+    ).toFloat()
+    val endAngle = Math.toDegrees(
+        atan2((open.y - hinge.y).toDouble(), (open.x - hinge.x).toDouble())
+    ).toFloat()
+    var sweep = endAngle - startAngle
+    while (sweep > 180f) sweep -= 360f
+    while (sweep <= -180f) sweep += 360f
+
+    drawArc(
+        color = color.copy(alpha = 0.8f),
+        startAngle = startAngle,
+        sweepAngle = sweep,
+        useCenter = false,
+        topLeft = Offset(hinge.x - radius, hinge.y - radius),
+        size = Size(radius * 2, radius * 2),
+        style = Stroke(width = 2f)
+    )
+    drawLine(color = color, start = hinge, end = open, strokeWidth = 3f)
 }
 
 /** Oznaka strane sveta, sa providnom pozadinom da ne zaklanja sobe. */
