@@ -2,11 +2,12 @@ package com.zoran.aihomedesigner.data
 
 import com.zoran.aihomedesigner.domain.DimensionSource
 import com.zoran.aihomedesigner.domain.Furniture
-import com.zoran.aihomedesigner.domain.FurnitureChecker
 import com.zoran.aihomedesigner.domain.FurnitureInput
 import com.zoran.aihomedesigner.domain.FurnitureInputErrors
+import com.zoran.aihomedesigner.domain.FurniturePlacement
 import com.zoran.aihomedesigner.domain.FurnitureValidation
 import com.zoran.aihomedesigner.domain.FurnitureValidator
+import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.RoomPlacement
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -32,9 +33,8 @@ class FurnitureRepository(
         dao.observeByProject(projectId).map { rows -> rows.mapNotNull { it.toDomainOrNull() } }
 
     /**
-     * Proverava unos, pa upisuje predmet. Predmet dobija prvo slobodno mesto u sobi
-     * (bez preklapanja i bez smetanja vratima). Ako ga nema, postavlja se u ugao sobe,
-     * a provera nameštaja će prijaviti problem. Mere koje je korisnik upisao vode se kao USER_CONFIRMED.
+     * Proverava unos, pa tek onda upisuje predmet. Mere koje je korisnik upisao vode se kao USER_CONFIRMED.
+     * Novi predmet dobija prvo slobodno mesto u sobi (ili gornji levi ugao ako mesta nema).
      */
     suspend fun createFurniture(
         roomId: String,
@@ -43,31 +43,29 @@ class FurnitureRepository(
     ): FurnitureSaveResult {
         val room = roomDao.getById(roomId)?.toDomainOrNull() ?: return FurnitureSaveResult.NotFound
 
-        return when (val validation = FurnitureValidator.validate(input, room)) {
+        return when (val validation = FurnitureValidator.validate(input)) {
             is FurnitureValidation.Invalid -> FurnitureSaveResult.Invalid(validation.errors)
             is FurnitureValidation.Valid -> {
-                val others = dao.getByRoom(roomId).mapNotNull { it.toDomainOrNull() }
+                val existing = dao.getByRoom(roomId).mapNotNull { it.toDomainOrNull() }
                 val openings = openingDao.getByRoom(roomId).mapNotNull { it.toDomainOrNull() }
+                val turned = validation.rotationDeg % 180 != 0
+                val footprintLength = if (turned) validation.widthM else validation.lengthM
+                val footprintWidth = if (turned) validation.lengthM else validation.widthM
+                val spot = FurniturePlacement.firstFreeSpot(
+                    room, existing, footprintLength, footprintWidth, openings
+                ) ?: PlanPoint(0.0, 0.0)
 
-                // Ako predmet staje u sobu samo okrenut, odmah se okreće za 90 stepeni.
-                val eps = com.zoran.aihomedesigner.domain.RoomGeometry.EPSILON_M
-                val fitsAsIs = validation.lengthM <= room.lengthM + eps && validation.widthM <= room.widthM + eps
-                val turns = if (fitsAsIs) 0 else 1
-                val footprintLength = if (turns == 0) validation.lengthM else validation.widthM
-                val footprintWidth = if (turns == 0) validation.widthM else validation.lengthM
-
-                val spot = FurnitureChecker.findFreeSpot(room, others, openings, footprintLength, footprintWidth)
                 val furniture = Furniture(
                     id = Furniture.newId(),
                     roomId = roomId,
                     name = validation.name,
-                    category = validation.category,
+                    category = input.category,
                     lengthM = validation.lengthM,
                     widthM = validation.widthM,
                     heightM = validation.heightM,
-                    xM = spot?.xM ?: 0.0,
-                    yM = spot?.yM ?: 0.0,
-                    quarterTurns = turns,
+                    xM = spot.xM,
+                    yM = spot.yM,
+                    rotationDeg = validation.rotationDeg,
                     dimensionSource = DimensionSource.USER_CONFIRMED,
                     createdAtMillis = nowMillis
                 )
@@ -77,12 +75,14 @@ class FurnitureRepository(
         }
     }
 
-    /** Menja ime, vrstu i mere predmeta. Položaj i okretanje ostaju isti. */
+    /**
+     * Menja ime, kategoriju, mere i okretanje. Položaj u sobi se ne menja (nova mera može da izvuče
+     * predmet iz sobe, ali to prijavljuje provera rasporeda, a ne ova funkcija).
+     */
     suspend fun updateFurniture(furnitureId: String, input: FurnitureInput): FurnitureSaveResult {
         val existing = dao.getById(furnitureId)?.toDomainOrNull() ?: return FurnitureSaveResult.NotFound
-        val room = roomDao.getById(existing.roomId)?.toDomainOrNull() ?: return FurnitureSaveResult.NotFound
 
-        return when (val validation = FurnitureValidator.validate(input, room)) {
+        return when (val validation = FurnitureValidator.validate(input)) {
             is FurnitureValidation.Invalid -> FurnitureSaveResult.Invalid(validation.errors)
             is FurnitureValidation.Valid -> {
                 val dimensionsChanged =
@@ -91,10 +91,11 @@ class FurnitureRepository(
                         validation.heightM != existing.heightM
                 val updated = existing.copy(
                     name = validation.name,
-                    category = validation.category,
+                    category = input.category,
                     lengthM = validation.lengthM,
                     widthM = validation.widthM,
                     heightM = validation.heightM,
+                    rotationDeg = validation.rotationDeg,
                     dimensionSource = if (dimensionsChanged) {
                         DimensionSource.USER_CONFIRMED
                     } else {
@@ -107,16 +108,11 @@ class FurnitureRepository(
         }
     }
 
-    /** Pomera predmet u sobi. Neispravne koordinate (NaN, beskonačno, preko 1 km) se odbacuju. */
-    suspend fun moveFurniture(furnitureId: String, xM: Double, yM: Double) {
+    /** Pomera i okreće predmet u sobi. Neispravne koordinate ili ugao se odbacuju. */
+    suspend fun moveFurniture(furnitureId: String, xM: Double, yM: Double, rotationDeg: Int) {
         if (!RoomPlacement.isValidCoordinate(xM) || !RoomPlacement.isValidCoordinate(yM)) return
-        dao.updatePosition(furnitureId, xM, yM)
-    }
-
-    /** Okreće predmet za 90 stepeni u smeru kazaljke na satu. */
-    suspend fun rotateFurniture(furnitureId: String) {
-        val existing = dao.getById(furnitureId)?.toDomainOrNull() ?: return
-        dao.updateQuarterTurns(furnitureId, (existing.quarterTurns + 1) % 4)
+        val rotation = FurnitureValidator.normalizeRotation(rotationDeg) ?: return
+        dao.updatePlacement(furnitureId, xM, yM, rotation)
     }
 
     suspend fun deleteFurniture(id: String) = dao.deleteById(id)

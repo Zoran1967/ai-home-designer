@@ -5,11 +5,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zoran.aihomedesigner.data.AppDatabase
 import com.zoran.aihomedesigner.data.CreateProjectResult
+import com.zoran.aihomedesigner.data.FurnitureRepository
+import com.zoran.aihomedesigner.data.FurnitureSaveResult
 import com.zoran.aihomedesigner.data.OpeningRepository
 import com.zoran.aihomedesigner.data.OpeningSaveResult
 import com.zoran.aihomedesigner.data.ProjectRepository
 import com.zoran.aihomedesigner.data.RoomRepository
 import com.zoran.aihomedesigner.data.RoomSaveResult
+import com.zoran.aihomedesigner.domain.Furniture
+import com.zoran.aihomedesigner.domain.FurnitureInput
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.OpeningInput
 import com.zoran.aihomedesigner.domain.Project
@@ -28,6 +32,11 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     private val repository = ProjectRepository(database.projectDao())
     private val roomRepository = RoomRepository(database.roomDao())
     private val openingRepository = OpeningRepository(database.openingDao(), database.roomDao())
+    private val furnitureRepository = FurnitureRepository(
+        database.furnitureDao(),
+        database.roomDao(),
+        database.openingDao()
+    )
 
     /** null znači da se projekti još učitavaju iz baze. */
     val projects: StateFlow<List<Project>?> = repository.observeProjects()
@@ -119,6 +128,44 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     fun deleteOpening(id: String) {
         viewModelScope.launch {
             openingRepository.deleteOpening(id)
+        }
+    }
+
+    fun observeFurniture(roomId: String): Flow<List<Furniture>> =
+        furnitureRepository.observeByRoom(roomId)
+
+    fun observeProjectFurniture(projectId: String): Flow<List<Furniture>> =
+        furnitureRepository.observeByProject(projectId)
+
+    fun createFurniture(
+        roomId: String,
+        input: FurnitureInput,
+        onResult: (FurnitureSaveResult) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(furnitureRepository.createFurniture(roomId, input))
+        }
+    }
+
+    fun updateFurniture(
+        furnitureId: String,
+        input: FurnitureInput,
+        onResult: (FurnitureSaveResult) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(furnitureRepository.updateFurniture(furnitureId, input))
+        }
+    }
+
+    fun moveFurniture(furnitureId: String, xM: Double, yM: Double, rotationDeg: Int) {
+        viewModelScope.launch {
+            furnitureRepository.moveFurniture(furnitureId, xM, yM, rotationDeg)
+        }
+    }
+
+    fun deleteFurniture(id: String) {
+        viewModelScope.launch {
+            furnitureRepository.deleteFurniture(id)
         }
     }
 }
