@@ -5,7 +5,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Red u tabeli "openings" (vrata i prozori). Brisanjem sobe brišu se i njeni otvori. Mere su u metrima. */
+/**
+ * Red u tabeli "openings" (vrata i prozori). Brisanjem sobe brišu se i njeni otvori.
+ * Mere su u metrima. Enum vrednosti se čuvaju po imenu.
+ */
 @Entity(
     tableName = "openings",
     foreignKeys = [
@@ -21,8 +24,8 @@ import androidx.room.PrimaryKey
 data class OpeningEntity(
     @PrimaryKey val id: String,
     val roomId: String,
-    val side: String,
     val type: String,
+    val side: String,
     val offsetM: Double,
     val widthM: Double,
     val heightM: Double,

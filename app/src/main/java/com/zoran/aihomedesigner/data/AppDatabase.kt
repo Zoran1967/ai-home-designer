@@ -56,15 +56,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /** Verzija 3 -> 4: dodaje tabelu vrata i prozora. Postojeći projekti i sobe ostaju netaknuti. */
+        /** Verzija 3 -> 4: dodaje tabelu otvora (vrata i prozori). Postojeći podaci ostaju netaknuti. */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `openings` (" +
                         "`id` TEXT NOT NULL, " +
                         "`roomId` TEXT NOT NULL, " +
-                        "`side` TEXT NOT NULL, " +
                         "`type` TEXT NOT NULL, " +
+                        "`side` TEXT NOT NULL, " +
                         "`offsetM` REAL NOT NULL, " +
                         "`widthM` REAL NOT NULL, " +
                         "`heightM` REAL NOT NULL, " +

@@ -10,12 +10,13 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface OpeningDao {
 
-    /** Svi otvori svih soba jednog projekta. */
+    @Query("SELECT * FROM openings WHERE roomId = :roomId ORDER BY createdAtMillis ASC")
+    fun observeByRoom(roomId: String): Flow<List<OpeningEntity>>
+
+    /** Svi otvori svih soba jednog projekta (za crtanje plana). */
     @Query(
-        "SELECT openings.* FROM openings " +
-            "INNER JOIN rooms ON rooms.id = openings.roomId " +
-            "WHERE rooms.projectId = :projectId " +
-            "ORDER BY openings.createdAtMillis ASC"
+        "SELECT o.* FROM openings o INNER JOIN rooms r ON o.roomId = r.id " +
+            "WHERE r.projectId = :projectId ORDER BY o.createdAtMillis ASC"
     )
     fun observeByProject(projectId: String): Flow<List<OpeningEntity>>
 

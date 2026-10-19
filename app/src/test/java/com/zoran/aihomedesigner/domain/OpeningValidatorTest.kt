@@ -1,20 +1,21 @@
 package com.zoran.aihomedesigner.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OpeningValidatorTest {
 
-    // Soba 4,0 m (dužina) x 3,0 m (širina), visina zida 2,6 m.
-    private fun room(height: Double = 2.6) = Room(
-        id = "room1",
+    // Soba 4 m x 3 m, visine 2,6 m
+    private val room = Room(
+        id = "r1",
         projectId = "p",
         name = "Soba",
         lengthM = 4.0,
         widthM = 3.0,
-        heightM = height,
+        heightM = 2.6,
         wallThicknessM = null,
         dimensionSource = DimensionSource.USER_CONFIRMED,
         createdAtMillis = 1L,
@@ -26,56 +27,102 @@ class OpeningValidatorTest {
         side: WallSide = WallSide.NORTH,
         offset: String = "1",
         width: String = "0,9",
-        height: String = "2,05"
-    ) = OpeningInput(
-        side, OpeningType.DOOR, offset, width, height, "", DoorSwing.INTO_ROOM, HingeSide.START
-    )
+        height: String = "2,05",
+        swing: DoorSwing? = DoorSwing.INTO_ROOM,
+        hinge: HingeEnd? = HingeEnd.START
+    ) = OpeningInput(OpeningType.DOOR, side, offset, width, height, "", swing, hinge)
 
     private fun window(
-        side: WallSide = WallSide.NORTH,
-        offset: String = "1",
+        side: WallSide = WallSide.EAST,
+        offset: String = "0,5",
         width: String = "1,2",
         height: String = "1,2",
         sill: String = "0,9"
-    ) = OpeningInput(
-        side, OpeningType.WINDOW, offset, width, height, sill, DoorSwing.INTO_ROOM, HingeSide.START
-    )
+    ) = OpeningInput(OpeningType.WINDOW, side, offset, width, height, sill, null, null)
 
-    private fun existing(side: WallSide, offset: Double, width: Double, roomId: String = "room1") = Opening(
-        id = "o-$offset", roomId = roomId, side = side, type = OpeningType.WINDOW,
-        offsetM = offset, widthM = width, heightM = 1.2, sillHeightM = 0.9,
-        swing = null, hinge = null, dimensionSource = DimensionSource.USER_CONFIRMED, createdAtMillis = 1L
+    private fun existing(
+        id: String,
+        side: WallSide,
+        offset: Double,
+        width: Double
+    ) = Opening(
+        id = id,
+        roomId = "r1",
+        type = OpeningType.DOOR,
+        side = side,
+        offsetM = offset,
+        widthM = width,
+        heightM = 2.0,
+        sillHeightM = 0.0,
+        swing = DoorSwing.INTO_ROOM,
+        hinge = HingeEnd.START,
+        dimensionSource = DimensionSource.USER_CONFIRMED,
+        createdAtMillis = 1L
     )
 
     private fun errorsOf(
         input: OpeningInput,
-        room: Room = room(),
-        others: List<Opening> = emptyList()
+        others: List<Opening> = emptyList(),
+        editingId: String? = null
     ): OpeningInputErrors {
-        val result = OpeningValidator.validate(input, room, others)
+        val result = OpeningValidator.validate(input, room, others, editingId)
         assertTrue("Očekivana greška, a unos je prošao", result is OpeningValidation.Invalid)
         return (result as OpeningValidation.Invalid).errors
     }
 
     private fun validOf(
         input: OpeningInput,
-        room: Room = room(),
-        others: List<Opening> = emptyList()
+        others: List<Opening> = emptyList(),
+        editingId: String? = null
     ): OpeningValidation.Valid {
-        val result = OpeningValidator.validate(input, room, others)
-        assertTrue("Unos je trebalo da prođe", result is OpeningValidation.Valid)
+        val result = OpeningValidator.validate(input, room, others, editingId)
+        assertTrue("Unos je trebalo da prođe: $result", result is OpeningValidation.Valid)
         return result as OpeningValidation.Valid
     }
 
     @Test
-    fun validDoorKeepsValuesAndHasZeroSill() {
+    fun wallLengthDependsOnSide() {
+        assertEquals(4.0, WallGeometry.wallLengthM(room, WallSide.NORTH), 0.0)
+        assertEquals(4.0, WallGeometry.wallLengthM(room, WallSide.SOUTH), 0.0)
+        assertEquals(3.0, WallGeometry.wallLengthM(room, WallSide.EAST), 0.0)
+        assertEquals(3.0, WallGeometry.wallLengthM(room, WallSide.WEST), 0.0)
+    }
+
+    @Test
+    fun validDoorKeepsValuesAndHasNoSill() {
         val v = validOf(door())
         assertEquals(1.0, v.offsetM, 1e-9)
         assertEquals(0.9, v.widthM, 1e-9)
         assertEquals(2.05, v.heightM, 1e-9)
-        assertEquals(0.0, v.sillHeightM, 1e-9)
+        assertEquals(0.0, v.sillHeightM, 0.0)
         assertEquals(DoorSwing.INTO_ROOM, v.swing)
-        assertEquals(HingeSide.START, v.hinge)
+        assertEquals(HingeEnd.START, v.hinge)
+    }
+
+    @Test
+    fun slidingDoorHasNoHingeEvenIfOneWasGiven() {
+        val v = validOf(door(swing = DoorSwing.SLIDING, hinge = HingeEnd.END))
+        assertEquals(DoorSwing.SLIDING, v.swing)
+        assertNull(v.hinge)
+    }
+
+    @Test
+    fun slidingDoorDoesNotNeedAHinge() {
+        validOf(door(swing = DoorSwing.SLIDING, hinge = null))
+    }
+
+    @Test
+    fun doorWithoutSwingIsRejected() {
+        val e = errorsOf(door(swing = null, hinge = null))
+        assertTrue(e.swingMissing)
+        assertFalse(e.hingeMissing)
+    }
+
+    @Test
+    fun hingedDoorWithoutHingeEndIsRejected() {
+        val e = errorsOf(door(swing = DoorSwing.OUT_OF_ROOM, hinge = null))
+        assertTrue(e.hingeMissing)
+        assertFalse(e.swingMissing)
     }
 
     @Test
@@ -87,141 +134,122 @@ class OpeningValidatorTest {
     }
 
     @Test
-    fun doorIgnoresSillText() {
-        val input = door().copy(sillHeight = "abc")
-        assertEquals(0.0, validOf(input).sillHeightM, 1e-9)
-    }
-
-    @Test
-    fun windowNeedsSill() {
+    fun windowNeedsASillHeightButAZeroSillIsAllowed() {
         assertEquals(DimensionError.MISSING, errorsOf(window(sill = "")).sillHeight)
-        assertEquals(DimensionError.TOO_LARGE, errorsOf(window(sill = "3")).sillHeight)
+        assertEquals(0.0, validOf(window(sill = "0")).sillHeightM, 0.0)
     }
 
     @Test
-    fun windowOnTheFloorIsAllowed() {
-        assertEquals(0.0, validOf(window(sill = "0")).sillHeightM, 1e-9)
-    }
-
-    @Test
-    fun commaAndDotBothWork() {
-        assertEquals(1.5, validOf(door(offset = "1,5")).offsetM, 1e-9)
-        assertEquals(1.5, validOf(door(offset = "1.5")).offsetM, 1e-9)
-    }
-
-    @Test
-    fun textIsNotANumberAndEmptyIsMissing() {
-        assertEquals(DimensionError.NOT_A_NUMBER, errorsOf(door(offset = "abc")).offset)
-        assertEquals(DimensionError.NOT_A_NUMBER, errorsOf(door(width = "-1")).width)
-        assertEquals(DimensionError.MISSING, errorsOf(door(offset = "")).offset)
-        assertEquals(DimensionError.MISSING, errorsOf(door(height = " ")).height)
+    fun doorIgnoresTheSillField() {
+        val input = door().copy(sillHeight = "abc")
+        assertEquals(0.0, validOf(input).sillHeightM, 0.0)
     }
 
     @Test
     fun doorSizeLimitsAreChecked() {
         assertEquals(DimensionError.TOO_SMALL, errorsOf(door(width = "0,3")).width)
-        assertEquals(DimensionError.TOO_LARGE, errorsOf(door(width = "4")).width)
-        assertEquals(DimensionError.TOO_SMALL, errorsOf(door(height = "1,5")).height)
+        assertEquals(DimensionError.TOO_LARGE, errorsOf(door(width = "3,5")).width)
+        assertEquals(DimensionError.TOO_SMALL, errorsOf(door(height = "1,2")).height)
         assertEquals(DimensionError.TOO_LARGE, errorsOf(door(height = "3,5")).height)
     }
 
     @Test
-    fun windowCanBeSmallerThanADoor() {
-        validOf(window(width = "0,4", height = "0,4"))
+    fun windowSizeLimitsAreChecked() {
+        assertEquals(DimensionError.TOO_LARGE, errorsOf(window(width = "6")).width)
+        assertEquals(DimensionError.TOO_SMALL, errorsOf(window(width = "0,2")).width)
+        assertEquals(DimensionError.TOO_LARGE, errorsOf(window(sill = "3")).sillHeight)
+    }
+
+    @Test
+    fun narrowWindowIsFineEvenThoughTooNarrowForADoor() {
+        validOf(window(width = "0,4"))
+        assertEquals(DimensionError.TOO_SMALL, errorsOf(door(width = "0,4")).width)
+    }
+
+    @Test
+    fun textAndEmptyFieldsAreRejected() {
+        assertEquals(DimensionError.MISSING, errorsOf(door(offset = "")).offset)
+        assertEquals(DimensionError.NOT_A_NUMBER, errorsOf(door(width = "abc")).width)
+        assertEquals(DimensionError.NOT_A_NUMBER, errorsOf(door(height = "-2")).height)
+    }
+
+    @Test
+    fun commaAndDotBothWork() {
+        assertEquals(0.9, validOf(door(width = "0,9")).widthM, 1e-9)
+        assertEquals(0.9, validOf(door(width = "0.9")).widthM, 1e-9)
     }
 
     @Test
     fun openingMustFitInTheWall() {
-        val errors = errorsOf(door(side = WallSide.NORTH, offset = "3,5"))
-        assertEquals(OpeningLayoutError.OUT_OF_WALL, errors.layout)
-    }
-
-    @Test
-    fun wallLengthDependsOnTheSide() {
-        // Severni zid je dug 4,0 m, a zapadni 3,0 m: isti otvor staje na jednom, a na drugom ne.
-        validOf(door(side = WallSide.NORTH, offset = "2,5"))
-        val errors = errorsOf(door(side = WallSide.WEST, offset = "2,5"))
-        assertEquals(OpeningLayoutError.OUT_OF_WALL, errors.layout)
-        validOf(door(side = WallSide.SOUTH, offset = "2,5"))
+        assertEquals(OpeningPlacementError.EXCEEDS_WALL, errorsOf(door(offset = "3,5")).placement)
+        // istočni zid je dug 3 m (širina sobe)
         assertEquals(
-            OpeningLayoutError.OUT_OF_WALL,
-            errorsOf(door(side = WallSide.EAST, offset = "2,5")).layout
+            OpeningPlacementError.EXCEEDS_WALL,
+            errorsOf(door(side = WallSide.EAST, offset = "2,5")).placement
         )
     }
 
     @Test
-    fun openingThatExactlyFillsTheWallIsAccepted() {
-        validOf(door(offset = "3,1", width = "0,9"))
-        validOf(door(offset = "0", width = "3"))
+    fun openingThatExactlyFillsTheWallFits() {
+        validOf(door(offset = "3,1"))
+        validOf(door(side = WallSide.WEST, offset = "2,1"))
     }
 
     @Test
-    fun openingMustFitInRoomHeight() {
-        val lowRoom = room(height = 2.0)
-        val errors = errorsOf(door(height = "2,1"), room = lowRoom)
-        assertEquals(OpeningLayoutError.TOO_HIGH_FOR_ROOM, errors.layout)
+    fun openingAtTheStartOfTheWallIsAllowed() {
+        assertEquals(0.0, validOf(door(offset = "0")).offsetM, 0.0)
     }
 
     @Test
-    fun windowSillPlusHeightMustFitInRoomHeight() {
-        val errors = errorsOf(window(height = "1,2", sill = "1,5"))
-        assertEquals(OpeningLayoutError.TOO_HIGH_FOR_ROOM, errors.layout)
-        validOf(window(height = "1,2", sill = "1,4"))
+    fun openingTallerThanTheRoomIsRejected() {
+        assertEquals(OpeningPlacementError.TOO_TALL_FOR_ROOM, errorsOf(door(height = "2,7")).placement)
     }
 
     @Test
-    fun overlapWithAnotherOpeningOnTheSameWallIsRejected() {
-        val others = listOf(existing(WallSide.NORTH, offset = 1.0, width = 1.0))
-        val errors = errorsOf(window(offset = "1,5"), others = others)
-        assertEquals(OpeningLayoutError.OVERLAPS_OTHER, errors.layout)
+    fun windowSillPlusHeightMustFitUnderTheCeiling() {
+        val e = errorsOf(window(sill = "2", height = "1"))
+        assertEquals(OpeningPlacementError.TOO_TALL_FOR_ROOM, e.placement)
+        validOf(window(sill = "1,4", height = "1,2"))
     }
 
     @Test
-    fun openingContainingAnotherOneOverlaps() {
-        val others = listOf(existing(WallSide.NORTH, offset = 1.5, width = 0.5))
-        val errors = errorsOf(window(offset = "1", width = "2"), others = others)
-        assertEquals(OpeningLayoutError.OVERLAPS_OTHER, errors.layout)
+    fun overlappingOpeningOnTheSameWallIsRejected() {
+        val others = listOf(existing("d1", WallSide.NORTH, 1.0, 0.9))
+        val e = errorsOf(window(side = WallSide.NORTH, offset = "1,5", width = "1"), others)
+        assertEquals(OpeningPlacementError.OVERLAPS_OTHER, e.placement)
     }
 
     @Test
-    fun openingsThatOnlyTouchDoNotOverlap() {
-        val others = listOf(existing(WallSide.NORTH, offset = 1.0, width = 1.0))
-        validOf(window(offset = "2"), others = others)
-        validOf(window(offset = "0", width = "1"), others = others)
+    fun openingsThatOnlyTouchAreAllowed() {
+        val others = listOf(existing("d1", WallSide.NORTH, 1.0, 0.9))
+        validOf(window(side = WallSide.NORTH, offset = "1,9", width = "1"), others)
     }
 
     @Test
-    fun sameOffsetOnAnotherWallIsFine() {
-        val others = listOf(existing(WallSide.NORTH, offset = 1.0, width = 1.0))
-        validOf(window(side = WallSide.SOUTH, offset = "1"), others = others)
+    fun openingOnAnotherWallAtTheSameOffsetIsAllowed() {
+        val others = listOf(existing("d1", WallSide.NORTH, 1.0, 0.9))
+        validOf(door(side = WallSide.SOUTH, offset = "1"), others)
     }
 
     @Test
-    fun openingsOfOtherRoomsAreIgnored() {
-        val others = listOf(existing(WallSide.NORTH, offset = 1.0, width = 1.0, roomId = "other"))
-        validOf(window(offset = "1"), others = others)
+    fun editedOpeningIsNotComparedWithItself() {
+        val others = listOf(existing("d1", WallSide.NORTH, 1.0, 0.9))
+        validOf(door(offset = "1"), others, editingId = "d1")
     }
 
     @Test
-    fun fieldErrorsAreReportedBeforeLayoutErrors() {
-        val errors = errorsOf(door(offset = "abc", width = "9"))
-        assertEquals(DimensionError.NOT_A_NUMBER, errors.offset)
-        assertEquals(DimensionError.TOO_LARGE, errors.width)
-        assertNull(errors.layout)
+    fun placementIsNotCheckedWhileAFieldIsStillInvalid() {
+        val e = errorsOf(door(offset = "3,5", width = ""))
+        assertEquals(DimensionError.MISSING, e.width)
+        assertNull(e.placement)
     }
 
     @Test
-    fun layoutErrorCheckWorksForAlreadySavedOpenings() {
-        val smallRoom = room().copy(lengthM = 3.0)
-        val error = OpeningValidator.layoutError(
-            WallSide.NORTH, offsetM = 2.5, widthM = 0.9, heightM = 2.0, sillHeightM = 0.0,
-            room = smallRoom, others = emptyList()
-        )
-        assertEquals(OpeningLayoutError.OUT_OF_WALL, error)
-    }
-
-    @Test
-    fun endOfOpeningIsOffsetPlusWidth() {
-        assertEquals(2.0, existing(WallSide.NORTH, 1.0, 1.0).endM, 1e-9)
+    fun allProblemsAreReportedAtOnce() {
+        val e = errorsOf(OpeningInput(OpeningType.DOOR, WallSide.NORTH, "", "abc", "9", "", null, null))
+        assertEquals(DimensionError.MISSING, e.offset)
+        assertEquals(DimensionError.NOT_A_NUMBER, e.width)
+        assertEquals(DimensionError.TOO_LARGE, e.height)
+        assertTrue(e.swingMissing)
     }
 }
