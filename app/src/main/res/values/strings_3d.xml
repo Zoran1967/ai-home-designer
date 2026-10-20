@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scene3d_button">3D prikaz</string>
+    <string name="scene3d_reset">Prilagodi</string>
+    <string name="scene3d_empty">Nema soba za prikaz.</string>
+    <string name="scene3d_hint">Prevucite prstom da okrenete prikaz, dva prsta zumiraju.</string>
+    <string name="scene3d_note_default_wall">Zidovi soba bez unete debljine crtaju se debljine 10 cm. To je samo izgled.</string>
+    <string name="scene3d_disclaimer">Ovo je ilustracija napravljena iz istih podataka kao plan. Mere se čitaju sa plana i iz lista soba, ne iz ovog prikaza.</string>
+</resources>
