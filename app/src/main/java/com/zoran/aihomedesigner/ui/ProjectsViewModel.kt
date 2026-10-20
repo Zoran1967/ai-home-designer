@@ -1,11 +1,15 @@
 package com.zoran.aihomedesigner.ui
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zoran.aihomedesigner.data.AppDatabase
 import com.zoran.aihomedesigner.data.CreateProjectResult
 import com.zoran.aihomedesigner.data.FurnitureRepository
+import com.zoran.aihomedesigner.data.ImportedImage
+import com.zoran.aihomedesigner.data.PlanImageRepository
 import com.zoran.aihomedesigner.data.FurnitureSaveResult
 import com.zoran.aihomedesigner.data.OpeningRepository
 import com.zoran.aihomedesigner.data.OpeningSaveResult
@@ -15,6 +19,7 @@ import com.zoran.aihomedesigner.data.RoomSaveResult
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureInput
 import com.zoran.aihomedesigner.domain.Opening
+import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.OpeningInput
 import com.zoran.aihomedesigner.domain.Project
 import com.zoran.aihomedesigner.domain.PropertyType
@@ -31,6 +36,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     private val database = AppDatabase.get(application)
     private val repository = ProjectRepository(database.projectDao())
     private val roomRepository = RoomRepository(database.roomDao())
+    private val planImageRepository = PlanImageRepository(application, database.planImageDao())
     private val openingRepository = OpeningRepository(database.openingDao(), database.roomDao())
     private val furnitureRepository = FurnitureRepository(
         database.furnitureDao(),
@@ -54,6 +60,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
 
     fun deleteProject(id: String) {
         viewModelScope.launch {
+            planImageRepository.deleteImage(id)
             repository.deleteProject(id)
         }
     }
@@ -168,4 +175,47 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
             furnitureRepository.deleteFurniture(id)
         }
     }
+
+    fun observePlanImage(projectId: String): Flow<PlanImage?> =
+        planImageRepository.observe(projectId)
+
+    /** Kopira izabranu sliku u aplikaciju. Rezultat je null ako se slika ne može koristiti. */
+    fun importPlanImage(projectId: String, uri: Uri, onResult: (ImportedImage?) -> Unit) {
+        viewModelScope.launch {
+            onResult(planImageRepository.copyImage(projectId, uri))
+        }
+    }
+
+    fun savePlanCalibration(
+        projectId: String,
+        image: ImportedImage,
+        metersPerPixel: Double,
+        onDone: () -> Unit
+    ) {
+        viewModelScope.launch {
+            planImageRepository.saveCalibrated(projectId, image, metersPerPixel)
+            onDone()
+        }
+    }
+
+    fun discardImportedImage(image: ImportedImage) {
+        viewModelScope.launch {
+            planImageRepository.discard(image)
+        }
+    }
+
+    fun movePlanImage(projectId: String, xM: Double, yM: Double) {
+        viewModelScope.launch {
+            planImageRepository.moveImage(projectId, xM, yM)
+        }
+    }
+
+    fun deletePlanImage(projectId: String) {
+        viewModelScope.launch {
+            planImageRepository.deleteImage(projectId)
+        }
+    }
+
+    suspend fun loadPlanBitmap(fileName: String, maxSidePx: Int): Bitmap? =
+        planImageRepository.loadBitmap(fileName, maxSidePx)
 }
