@@ -107,6 +107,8 @@ fun PlanScreen(
     var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
     var dragRoomId by remember { mutableStateOf<String?>(null) }
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var dragFurnitureId by remember { mutableStateOf<String?>(null) }
+    var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
     var stepM by rememberSaveable { mutableStateOf(0.05) }
     var snapFeedback by remember { mutableStateOf<SnapFeedback?>(null) }
 
@@ -129,7 +131,15 @@ fun PlanScreen(
         }
     }.toSet()
     val selectedRoom = displayRooms.firstOrNull { it.id == selectedId }
-    val selectedFurniture = furniture.firstOrNull { item ->
+    val furniturePoint = dragFurniturePoint
+    val displayFurniture = furniture.map { item ->
+        if (item.id == dragFurnitureId && furniturePoint != null) {
+            item.copy(xM = furniturePoint.xM, yM = furniturePoint.yM)
+        } else {
+            item
+        }
+    }
+    val selectedFurniture = displayFurniture.firstOrNull { item ->
         item.id == selectedFurnitureId && displayRooms.any { it.id == item.roomId }
     }
 
@@ -137,7 +147,7 @@ fun PlanScreen(
     val furnitureIssues: List<FurnitureIssue> = displayRooms.flatMap { room ->
         FurnitureLayoutValidator.validate(
             room,
-            furniture.filter { it.roomId == room.id },
+            displayFurniture.filter { it.roomId == room.id },
             openings.filter { it.roomId == room.id }
         )
     }
@@ -151,10 +161,17 @@ fun PlanScreen(
     }.toSet()
 
     val currentRooms by rememberUpdatedState(displayRooms)
-    val currentFurniture by rememberUpdatedState(furniture)
+    val currentFurniture by rememberUpdatedState(displayFurniture)
+    val currentOnMoveFurniture by rememberUpdatedState(onMoveFurniture)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
 
     LaunchedEffect(selectedId) { snapFeedback = null }
+
+    // Kad stigne novi spisak nameštaja iz baze, privremeni položaj prevlačenja više nije potreban.
+    LaunchedEffect(furniture) {
+        dragFurnitureId = null
+        dragFurniturePoint = null
+    }
 
     // Sobe koje još nemaju položaj (npr. starije sobe) dobijaju ga pri otvaranju plana.
     LaunchedEffect(rooms) {
@@ -304,9 +321,23 @@ fun PlanScreen(
                                 startPos.x >= left && startPos.x <= left + room.lengthM * startScale &&
                                     startPos.y >= top && startPos.y <= top + room.widthM * startScale
                             }
+                            // Nameštaj je iznad sobe, pa ima prednost pri prevlačenju.
+                            val hitItem = currentFurniture.lastOrNull { item ->
+                                val itemRoom = currentRooms.firstOrNull { it.id == item.roomId }
+                                    ?: return@lastOrNull false
+                                val left = startOffset.x + (itemRoom.xM!! + item.xM) * startScale
+                                val top = startOffset.y + (itemRoom.yM!! + item.yM) * startScale
+                                startPos.x >= left &&
+                                    startPos.x <= left + item.footprintLengthM * startScale &&
+                                    startPos.y >= top &&
+                                    startPos.y <= top + item.footprintWidthM * startScale
+                            }
+                            val hitItemRoom = hitItem?.let { f -> currentRooms.firstOrNull { it.id == f.roomId } }
+                            var draggingFurnitureId: String? =
+                                if (hitItem != null && hitItemRoom != null) hitItem.id else null
                             val startX = hit?.xM ?: 0.0
                             val startY = hit?.yM ?: 0.0
-                            var draggingId: String? = hit?.id
+                            var draggingId: String? = if (draggingFurnitureId == null) hit?.id else null
                             var moved = false
                             var multiTouch = false
 
@@ -319,6 +350,9 @@ fun PlanScreen(
                                         draggingId = null
                                         dragRoomId = null
                                         dragPoint = null
+                                        draggingFurnitureId = null
+                                        dragFurnitureId = null
+                                        dragFurniturePoint = null
                                     }
                                     val zoom = event.calculateZoom()
                                     val pan = event.calculatePan()
@@ -335,7 +369,19 @@ fun PlanScreen(
                                     if (!moved && total.getDistance() > slop) moved = true
                                     if (moved) {
                                         val id = draggingId
-                                        if (id != null) {
+                                        val furnitureId = draggingFurnitureId
+                                        if (furnitureId != null && hitItem != null && hitItemRoom != null) {
+                                            val maxX = max(0.0, hitItemRoom.lengthM - hitItem.footprintLengthM)
+                                            val maxY = max(0.0, hitItemRoom.widthM - hitItem.footprintWidthM)
+                                            val nx = RoomPlacement.snapToGrid(hitItem.xM + total.x / startScale)
+                                                .coerceIn(0.0, maxX)
+                                            val ny = RoomPlacement.snapToGrid(hitItem.yM + total.y / startScale)
+                                                .coerceIn(0.0, maxY)
+                                            dragFurnitureId = furnitureId
+                                            dragFurniturePoint = PlanPoint(nx, ny)
+                                            selectedFurnitureId = furnitureId
+                                            selectedId = null
+                                        } else if (id != null) {
                                             val nx = RoomPlacement.clampCoordinate(
                                                 RoomPlacement.snapToGrid(startX + total.x / startScale)
                                             )
@@ -379,6 +425,16 @@ fun PlanScreen(
                                     if (id != null && p != null) {
                                         currentOnMove(id, p.xM, p.yM)
                                     }
+                                    val furnitureId = draggingFurnitureId
+                                    val furniturePos = dragFurniturePoint
+                                    if (furnitureId != null && furniturePos != null && hitItem != null) {
+                                        currentOnMoveFurniture(
+                                            furnitureId,
+                                            furniturePos.xM,
+                                            furniturePos.yM,
+                                            hitItem.rotationDeg
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -404,7 +460,7 @@ fun PlanScreen(
                 }
 
                 val roomsById = displayRooms.associateBy { it.id }
-                furniture.forEach { item ->
+                displayFurniture.forEach { item ->
                     val room = roomsById[item.roomId]
                     if (room != null) {
                         PlanFurniture(
@@ -509,7 +565,7 @@ fun PlanScreen(
 
                 furnitureIssues.take(MAX_ISSUES_SHOWN).forEach { issue ->
                     Text(
-                        text = furnitureIssueText(issue, furniture),
+                        text = furnitureIssueText(issue, displayFurniture),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 2.dp)
