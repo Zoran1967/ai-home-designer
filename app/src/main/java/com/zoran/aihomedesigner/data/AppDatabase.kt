@@ -8,8 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProjectEntity::class, RoomEntity::class, OpeningEntity::class, FurnitureEntity::class],
-    version = 5,
+    entities = [
+        ProjectEntity::class,
+        RoomEntity::class,
+        OpeningEntity::class,
+        FurnitureEntity::class,
+        PlanImageEntity::class
+    ],
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +27,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun openingDao(): OpeningDao
 
     abstract fun furnitureDao(): FurnitureDao
+
+    abstract fun planImageDao(): PlanImageDao
 
     companion object {
         /** Verzija 1 -> 2: dodaje tabelu soba. Postojeći projekti ostaju netaknuti. */
@@ -112,6 +120,27 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Verzija 5 -> 6: dodaje tabelu slika plana (podloga). Postojeći podaci ostaju netaknuti. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `plan_images` (" +
+                        "`projectId` TEXT NOT NULL, " +
+                        "`fileName` TEXT NOT NULL, " +
+                        "`widthPx` INTEGER NOT NULL, " +
+                        "`heightPx` INTEGER NOT NULL, " +
+                        "`metersPerPixel` REAL NOT NULL, " +
+                        "`originXM` REAL NOT NULL, " +
+                        "`originYM` REAL NOT NULL, " +
+                        "`dimensionSource` TEXT NOT NULL, " +
+                        "`createdAtMillis` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`projectId`), " +
+                        "FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -122,7 +151,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "ai_home_designer.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                     .also { instance = it }
             }
