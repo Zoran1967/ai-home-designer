@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="calibration_title">Kalibracija razmere</string>
+    <string name="calibration_instructions">Dodirnite dve tačke na slici čije pravo rastojanje znate, na primer krajeve zida. Zumirajte prstima radi preciznosti, a povlačenjem pomerajte sliku. Treći dodir počinje ispočetka.</string>
+    <string name="calibration_clear">Poništi tačke</string>
+    <string name="calibration_distance_label">Pravo rastojanje između tačaka (m)</string>
+    <string name="calibration_distance_hint">Na primer: 3,5</string>
+    <string name="calibration_save">Sačuvaj razmeru</string>
+    <string name="calibration_need_points">Obeležite dve tačke na slici.</string>
+    <string name="calibration_points_too_close">Tačke su preblizu jedna drugoj. Obeležite tačke koje su dalje.</string>
+    <string name="calibration_implausible">Sa ovom razmerom slika bi predstavljala nerealno veliku ili malu površinu. Proverite upisano rastojanje.</string>
+    <string name="calibration_preview">Slika bi predstavljala oko %1$s × %2$s m.</string>
+    <string name="calibration_accuracy_note">Tačnost razmere zavisi od toga koliko precizno ste obeležili tačke. Razmera se vodi kao „uvezena i kalibrisana“, a ne kao izmerena.</string>
+    <string name="calibration_load_failed">Slika se ne može prikazati.</string>
+</resources>
