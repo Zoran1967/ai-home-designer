@@ -57,6 +57,8 @@ import com.zoran.aihomedesigner.R
 import com.zoran.aihomedesigner.domain.DoorSwingGeometry
 import com.zoran.aihomedesigner.domain.DoorSwingShape
 import com.zoran.aihomedesigner.domain.Furniture
+import com.zoran.aihomedesigner.domain.FurnitureIssue
+import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
@@ -130,6 +132,23 @@ fun PlanScreen(
     val selectedFurniture = furniture.firstOrNull { item ->
         item.id == selectedFurnitureId && displayRooms.any { it.id == item.roomId }
     }
+
+    // Provera rasporeda nameštaja, soba po soba (izlazak iz sobe, visina, preklapanje, blokiranje vrata)
+    val furnitureIssues: List<FurnitureIssue> = displayRooms.flatMap { room ->
+        FurnitureLayoutValidator.validate(
+            room,
+            furniture.filter { it.roomId == room.id },
+            openings.filter { it.roomId == room.id }
+        )
+    }
+    val furnitureWithIssues: Set<String> = furnitureIssues.flatMap { issue ->
+        when (issue) {
+            is FurnitureIssue.OutsideRoom -> listOf(issue.furnitureId)
+            is FurnitureIssue.TooTall -> listOf(issue.furnitureId)
+            is FurnitureIssue.Overlap -> listOf(issue.furnitureAId, issue.furnitureBId)
+            is FurnitureIssue.BlocksDoor -> listOf(issue.furnitureId)
+        }
+    }.toSet()
 
     val currentRooms by rememberUpdatedState(displayRooms)
     val currentFurniture by rememberUpdatedState(furniture)
@@ -205,6 +224,23 @@ fun PlanScreen(
             RoomPlacement.roundToMm((item.xM + dx).coerceIn(0.0, maxX)),
             RoomPlacement.roundToMm((item.yM + dy).coerceIn(0.0, maxY)),
             item.rotationDeg
+        )
+    }
+
+    fun rotateFurniture() {
+        val item = selectedFurniture ?: return
+        val room = displayRooms.firstOrNull { it.id == item.roomId } ?: return
+        val newRotation = (item.rotationDeg + 90) % 360
+        val turned = newRotation % 180 != 0
+        val newLength = if (turned) item.widthM else item.lengthM
+        val newWidth = if (turned) item.lengthM else item.widthM
+        val maxX = max(0.0, room.lengthM - newLength)
+        val maxY = max(0.0, room.widthM - newWidth)
+        onMoveFurniture(
+            item.id,
+            RoomPlacement.roundToMm(item.xM.coerceIn(0.0, maxX)),
+            RoomPlacement.roundToMm(item.yM.coerceIn(0.0, maxY)),
+            newRotation
         )
     }
 
@@ -376,7 +412,8 @@ fun PlanScreen(
                             room = room,
                             scale = scale,
                             offset = offset,
-                            selected = item.id == selectedFurnitureId
+                            selected = item.id == selectedFurnitureId,
+                            hasIssue = item.id in furnitureWithIssues
                         )
                     }
                 }
@@ -470,6 +507,22 @@ fun PlanScreen(
                     )
                 }
 
+                furnitureIssues.take(MAX_ISSUES_SHOWN).forEach { issue ->
+                    Text(
+                        text = furnitureIssueText(issue, furniture),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+                if (furnitureIssues.size > MAX_ISSUES_SHOWN) {
+                    Text(
+                        text = stringResource(R.string.plan_issue_more, furnitureIssues.size - MAX_ISSUES_SHOWN),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
                 if (selectedFurniture != null) {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -485,6 +538,12 @@ fun PlanScreen(
                                 ),
                                 style = MaterialTheme.typography.bodyMedium
                             )
+                            OutlinedButton(
+                                onClick = { rotateFurniture() },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text(stringResource(R.string.plan_furniture_rotate))
+                            }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(top = 8.dp)
@@ -718,7 +777,8 @@ private fun PlanFurniture(
     room: Room,
     scale: Float,
     offset: Offset,
-    selected: Boolean
+    selected: Boolean,
+    hasIssue: Boolean = false
 ) {
     val density = LocalDensity.current
     val left = (offset.x + (room.xM!! + furniture.xM) * scale).roundToInt()
@@ -736,8 +796,18 @@ private fun PlanFurniture(
                 with(density) { heightPx.toDp() }
             )
             .clipToBounds()
-            .background(colors.tertiaryContainer.copy(alpha = 0.85f))
-            .border(if (selected) 3.dp else 1.5.dp, if (selected) colors.primary else colors.tertiary)
+            .background(
+                if (hasIssue) colors.errorContainer.copy(alpha = 0.85f)
+                else colors.tertiaryContainer.copy(alpha = 0.85f)
+            )
+            .border(
+                if (selected) 3.dp else 1.5.dp,
+                when {
+                    hasIssue -> colors.error
+                    selected -> colors.primary
+                    else -> colors.tertiary
+                }
+            )
             .padding(2.dp)
     ) {
         Text(
@@ -821,6 +891,27 @@ private fun DrawScope.drawDoorSwing(shape: DoorSwingShape, scale: Float, offset:
         style = Stroke(width = 2f)
     )
     drawLine(color = color, start = hinge, end = open, strokeWidth = 3f)
+}
+
+@Composable
+private fun furnitureIssueText(issue: FurnitureIssue, furniture: List<Furniture>): String {
+    fun name(id: String): String = furniture.firstOrNull { it.id == id }?.name ?: "?"
+    return when (issue) {
+        is FurnitureIssue.OutsideRoom ->
+            stringResource(R.string.furniture_issue_outside, name(issue.furnitureId))
+
+        is FurnitureIssue.TooTall ->
+            stringResource(R.string.furniture_issue_too_tall, name(issue.furnitureId))
+
+        is FurnitureIssue.Overlap -> stringResource(
+            R.string.furniture_issue_overlap,
+            name(issue.furnitureAId),
+            name(issue.furnitureBId)
+        )
+
+        is FurnitureIssue.BlocksDoor ->
+            stringResource(R.string.furniture_issue_blocks_door, name(issue.furnitureId))
+    }
 }
 
 /** Oznaka strane sveta, sa providnom pozadinom da ne zaklanja sobe. */
