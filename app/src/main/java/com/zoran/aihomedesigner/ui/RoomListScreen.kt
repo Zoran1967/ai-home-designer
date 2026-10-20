@@ -40,6 +40,7 @@ fun RoomListScreen(
     onAddRoom: () -> Unit,
     onOpenRoom: (Room) -> Unit,
     onOpenPlan: () -> Unit,
+    onOpenScene3D: () -> Unit,
     onOpenOpenings: (Room) -> Unit,
     onOpenFurniture: (Room) -> Unit,
     onDeleteRoom: (Room) -> Unit
@@ -70,6 +71,9 @@ fun RoomListScreen(
                 if (!rooms.isNullOrEmpty()) {
                     TextButton(onClick = onOpenPlan) {
                         Text(stringResource(R.string.plan_button))
+                    }
+                    TextButton(onClick = onOpenScene3D) {
+                        Text(stringResource(R.string.scene3d_button))
                     }
                 }
             }

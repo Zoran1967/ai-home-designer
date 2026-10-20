@@ -28,6 +28,7 @@ import com.zoran.aihomedesigner.ui.FurnitureListScreen
 import com.zoran.aihomedesigner.ui.OpeningFormScreen
 import com.zoran.aihomedesigner.ui.OpeningListScreen
 import com.zoran.aihomedesigner.ui.PlanScreen
+import com.zoran.aihomedesigner.ui.Scene3DScreen
 import com.zoran.aihomedesigner.ui.ProjectListScreen
 import com.zoran.aihomedesigner.ui.ProjectsViewModel
 import com.zoran.aihomedesigner.ui.RoomFormScreen
@@ -41,6 +42,7 @@ private enum class Screen {
     CREATE_ROOM,
     EDIT_ROOM,
     PLAN,
+    SCENE3D,
     OPENINGS,
     CREATE_OPENING,
     EDIT_OPENING,
@@ -117,7 +119,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
-            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.OPENINGS, Screen.FURNITURE -> Screen.ROOMS
+            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.SCENE3D, Screen.OPENINGS, Screen.FURNITURE -> Screen.ROOMS
             Screen.CREATE_OPENING, Screen.EDIT_OPENING -> Screen.OPENINGS
             Screen.CREATE_FURNITURE, Screen.EDIT_FURNITURE -> Screen.FURNITURE
             else -> {
@@ -179,6 +181,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     screen = Screen.EDIT_ROOM
                 },
                 onOpenPlan = { screen = Screen.PLAN },
+                onOpenScene3D = { screen = Screen.SCENE3D },
                 onOpenOpenings = {
                     selectedRoomId = it.id
                     screen = Screen.OPENINGS
@@ -218,6 +221,15 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) },
                 onMoveFurniture = { id, x, y, rotation -> viewModel.moveFurniture(id, x, y, rotation) }
+            )
+        }
+
+        Screen.SCENE3D -> selectedProject?.let {
+            Scene3DScreen(
+                rooms = rooms,
+                openings = projectOpenings.orEmpty(),
+                furniture = projectFurniture.orEmpty(),
+                onBack = { screen = Screen.ROOMS }
             )
         }
 
