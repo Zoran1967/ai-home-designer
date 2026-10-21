@@ -45,6 +45,7 @@
     <string name="furniture_issue_too_tall">„%1$s“ je viši od sobe.</string>
     <string name="furniture_issue_overlap">„%1$s“ i „%2$s“ se preklapaju.</string>
     <string name="furniture_issue_blocks_door">„%1$s“ blokira vrata (prolaz ispred vrata ili luk otvaranja).</string>
-    <string name="furniture_checked">Provereno samo: izlazak iz sobe, visina, preklapanje predmeta i blokiranje vrata. Širina prolaza između predmeta se ne proverava.</string>
-    <string name="furniture_checked_ok">Ove provere nisu našle problem (izlazak iz sobe, visina, preklapanje predmeta, blokiranje vrata). Širina prolaza između predmeta se ne proverava.</string>
+    <string name="furniture_checked">Provereno samo: izlazak iz sobe, visina, preklapanje predmeta, blokiranje vrata i uski razmaci između predmeta. Kretanje po sobi se ne simulira.</string>
+    <string name="furniture_gap_note">Napomena: razmak između „%1$s“ i „%2$s“ je %3$s cm. Ako se tu prolazi, to je uže od 60 cm.</string>
+    <string name="furniture_checked_ok">Ove provere nisu našle problem (izlazak iz sobe, visina, preklapanje predmeta, blokiranje vrata). Kretanje po sobi se ne simulira.</string>
 </resources>

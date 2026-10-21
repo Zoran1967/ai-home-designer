@@ -32,6 +32,7 @@ import com.zoran.aihomedesigner.R
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureCategory
 import com.zoran.aihomedesigner.domain.FurnitureIssue
+import com.zoran.aihomedesigner.domain.FurniturePassages
 import com.zoran.aihomedesigner.domain.Room
 
 @Composable
@@ -105,10 +106,25 @@ fun FurnitureListScreen(
                 }
 
                 else -> {
+                    val gaps = FurniturePassages.narrowGaps(furniture)
                     issues.forEach { issue ->
                         Text(
                             text = issueText(issue, furniture),
                             color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    gaps.forEach { gap ->
+                        val nameA = furniture.firstOrNull { it.id == gap.furnitureAId }?.name ?: "?"
+                        val nameB = furniture.firstOrNull { it.id == gap.furnitureBId }?.name ?: "?"
+                        Text(
+                            text = stringResource(
+                                R.string.furniture_gap_note,
+                                nameA,
+                                nameB,
+                                formatCentimeters(gap.gapM)
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
