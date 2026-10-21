@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="export_png">Izvezi plan (slika)</string>
+    <string name="export_pdf">Izvezi plan (PDF)</string>
+    <string name="export_failed">Izvoz nije uspeo. Proverite da li su sobe postavljene na plan.</string>
+    <string name="export_share_title">Podeli plan</string>
+    <string name="export_note_layout">Raspored soba na planu je odabran u aplikaciji i nije izmeren.</string>
+    <string name="export_note_dimensions">Mere soba su unutrašnje (od zida do zida). Napravljeno u aplikaciji AI Home Designer.</string>
+</resources>

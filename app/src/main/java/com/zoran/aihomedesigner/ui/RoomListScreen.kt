@@ -45,6 +45,8 @@ fun RoomListScreen(
     planImage: PlanImage?,
     onImportPlanImage: () -> Unit,
     onRemovePlanImage: () -> Unit,
+    onExportPng: () -> Unit,
+    onExportPdf: () -> Unit,
     onOpenOpenings: (Room) -> Unit,
     onOpenFurniture: (Room) -> Unit,
     onDeleteRoom: (Room) -> Unit
@@ -107,6 +109,12 @@ fun RoomListScreen(
                     TextButton(onClick = { confirmRemoveImage = true }) {
                         Text(stringResource(R.string.plan_image_remove))
                     }
+                }
+            }
+            if (!rooms.isNullOrEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onExportPng) { Text(stringResource(R.string.export_png)) }
+                    TextButton(onClick = onExportPdf) { Text(stringResource(R.string.export_pdf)) }
                 }
             }
             if (confirmRemoveImage) {

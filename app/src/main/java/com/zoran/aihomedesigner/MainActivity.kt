@@ -1,5 +1,6 @@
 package com.zoran.aihomedesigner
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -17,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zoran.aihomedesigner.data.ImportedImage
 import com.zoran.aihomedesigner.domain.Furniture
+import com.zoran.aihomedesigner.export.PlanExporter
 import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.PlanImage
@@ -46,6 +49,7 @@ import com.zoran.aihomedesigner.ui.ProjectsViewModel
 import com.zoran.aihomedesigner.ui.RoomFormScreen
 import com.zoran.aihomedesigner.ui.RoomListScreen
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 private enum class Screen {
     PROJECTS,
@@ -164,6 +168,38 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     }
     val projectFurniture by projectFurnitureFlow.collectAsState(initial = null)
 
+    // Izvoz plana u sliku ili PDF i deljenje preko Android prozora za deljenje
+    val scope = rememberCoroutineScope()
+    fun exportPlan(format: PlanExporter.Format) {
+        val project = selectedProject ?: return
+        scope.launch {
+            val uri = PlanExporter.export(
+                context = context,
+                projectName = project.name,
+                northLabel = context.getString(R.string.compass_north),
+                footerLines = listOf(
+                    context.getString(R.string.export_note_layout),
+                    context.getString(R.string.export_note_dimensions)
+                ),
+                rooms = rooms.orEmpty(),
+                openings = projectOpenings.orEmpty(),
+                furniture = projectFurniture.orEmpty(),
+                format = format
+            )
+            if (uri == null) {
+                Toast.makeText(context, R.string.export_failed, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val mime = if (format == PlanExporter.Format.PNG) "image/png" else "application/pdf"
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mime
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(send, context.getString(R.string.export_share_title)))
+        }
+    }
+
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
             Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.SCENE3D, Screen.OPENINGS, Screen.FURNITURE -> Screen.ROOMS
@@ -241,6 +277,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 planImage = planImage,
                 onImportPlanImage = { pickImage.launch("image/*") },
                 onRemovePlanImage = { selectedProjectId?.let { viewModel.deletePlanImage(it) } },
+                onExportPng = { exportPlan(PlanExporter.Format.PNG) },
+                onExportPdf = { exportPlan(PlanExporter.Format.PDF) },
                 onOpenOpenings = {
                     selectedRoomId = it.id
                     screen = Screen.OPENINGS
