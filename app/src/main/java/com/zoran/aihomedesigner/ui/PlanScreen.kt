@@ -101,7 +101,8 @@ fun PlanScreen(
     onBack: () -> Unit,
     onMoveRoom: (String, Double, Double) -> Unit,
     onPlaceUnplaced: () -> Unit,
-    onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> }
+    onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> },
+    onMovePlanImage: (Double, Double) -> Unit = { _, _ -> }
 ) {
     var scale by remember { mutableFloatStateOf(60f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -113,6 +114,8 @@ fun PlanScreen(
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var moveImageMode by remember { mutableStateOf(false) }
+    var dragImagePoint by remember { mutableStateOf<PlanPoint?>(null) }
     var stepM by rememberSaveable { mutableStateOf(0.05) }
     var snapFeedback by remember { mutableStateOf<SnapFeedback?>(null) }
 
@@ -167,9 +170,14 @@ fun PlanScreen(
     val currentRooms by rememberUpdatedState(displayRooms)
     val currentFurniture by rememberUpdatedState(displayFurniture)
     val currentOnMoveFurniture by rememberUpdatedState(onMoveFurniture)
+    val currentOnMoveImage by rememberUpdatedState(onMovePlanImage)
+    val currentPlanImage by rememberUpdatedState(planImage)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
 
     LaunchedEffect(selectedId) { snapFeedback = null }
+
+    // Kad stigne novi položaj slike iz baze, privremeni položaj prevlačenja više nije potreban.
+    LaunchedEffect(planImage) { dragImagePoint = null }
 
     // Kad stigne novi spisak nameštaja iz baze, privremeni položaj prevlačenja više nije potreban.
     LaunchedEffect(furniture) {
@@ -346,6 +354,8 @@ fun PlanScreen(
                             var draggingId: String? = if (draggingFurnitureId == null) hit?.id else null
                             var moved = false
                             var multiTouch = false
+                            var draggingImage = false
+                            val startImageOrigin = currentPlanImage?.let { PlanPoint(it.originXM, it.originYM) }
 
                             do {
                                 val event = awaitPointerEvent()
@@ -359,6 +369,8 @@ fun PlanScreen(
                                         draggingFurnitureId = null
                                         dragFurnitureId = null
                                         dragFurniturePoint = null
+                                        draggingImage = false
+                                        dragImagePoint = null
                                     }
                                     val zoom = event.calculateZoom()
                                     val pan = event.calculatePan()
@@ -398,6 +410,15 @@ fun PlanScreen(
                                             dragPoint = PlanPoint(nx, ny)
                                             selectedId = id
                                             selectedFurnitureId = null
+                                        } else if (moveImageMode && startImageOrigin != null) {
+                                            val nx = RoomPlacement.clampCoordinate(
+                                                RoomPlacement.snapToGrid(startImageOrigin.xM + total.x / startScale)
+                                            )
+                                            val ny = RoomPlacement.clampCoordinate(
+                                                RoomPlacement.snapToGrid(startImageOrigin.yM + total.y / startScale)
+                                            )
+                                            draggingImage = true
+                                            dragImagePoint = PlanPoint(nx, ny)
                                         } else {
                                             offset = startOffset + total
                                         }
@@ -431,6 +452,10 @@ fun PlanScreen(
                                     if (id != null && p != null) {
                                         currentOnMove(id, p.xM, p.yM)
                                     }
+                                    val imagePos = dragImagePoint
+                                    if (draggingImage && imagePos != null) {
+                                        currentOnMoveImage(imagePos.xM, imagePos.yM)
+                                    }
                                     val furnitureId = draggingFurnitureId
                                     val furniturePos = dragFurniturePoint
                                     if (furnitureId != null && furniturePos != null && hitItem != null) {
@@ -449,12 +474,13 @@ fun PlanScreen(
                 // Podloga: slika plana ispod soba, polu providna, u razmeri iz kalibracije
                 val image = planImage
                 if (image != null && planBitmap != null) {
+                    val origin = dragImagePoint ?: PlanPoint(image.originXM, image.originYM)
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         drawImage(
                             image = planBitmap,
                             dstOffset = IntOffset(
-                                (offset.x + image.originXM * scale).roundToInt(),
-                                (offset.y + image.originYM * scale).roundToInt()
+                                (offset.x + origin.xM * scale).roundToInt(),
+                                (offset.y + origin.yM * scale).roundToInt()
                             ),
                             dstSize = IntSize(
                                 (image.widthM * scale).roundToInt().coerceAtLeast(1),
@@ -579,6 +605,21 @@ fun PlanScreen(
             }
 
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                if (planImage != null) {
+                    TextButton(onClick = { moveImageMode = !moveImageMode }) {
+                        Text(
+                            stringResource(
+                                if (moveImageMode) R.string.plan_image_move_on else R.string.plan_image_move_off
+                            )
+                        )
+                    }
+                    if (moveImageMode) {
+                        Text(
+                            text = stringResource(R.string.plan_image_move_hint),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
                 issues.take(MAX_ISSUES_SHOWN).forEach { issue ->
                     Text(
                         text = issueText(issue, displayRooms),

@@ -282,6 +282,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 furniture = projectFurniture.orEmpty(),
                 planImage = planImage,
                 planBitmap = planBitmap,
+                onMovePlanImage = { x, y -> selectedProjectId?.let { viewModel.movePlanImage(it, x, y) } },
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) },

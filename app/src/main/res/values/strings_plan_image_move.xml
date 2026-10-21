@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_image_move_off">Pomeri sliku</string>
+    <string name="plan_image_move_on">Pomeranje slike je uključeno. Dodirnite da isključite.</string>
+    <string name="plan_image_move_hint">Prevlačenje po praznom mestu pomera sliku, a ne prikaz. Sobe i dalje pomerate prstom, a dva prsta zumiraju.</string>
+</resources>
