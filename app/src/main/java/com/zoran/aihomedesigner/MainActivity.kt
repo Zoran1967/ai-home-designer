@@ -16,11 +16,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zoran.aihomedesigner.data.ImportedImage
@@ -269,10 +272,16 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         }
 
         Screen.PLAN -> selectedProject?.let { project ->
+            // Slika plana se učitava samo dok je plan otvoren, da ne zauzima memoriju bez potrebe
+            val planBitmap by produceState<ImageBitmap?>(initialValue = null, planImage?.fileName) {
+                value = planImage?.let { viewModel.loadPlanBitmap(it.fileName, 2048)?.asImageBitmap() }
+            }
             PlanScreen(
                 rooms = rooms,
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
+                planImage = planImage,
+                planBitmap = planBitmap,
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) },

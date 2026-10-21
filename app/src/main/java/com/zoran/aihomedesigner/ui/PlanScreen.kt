@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -60,6 +61,7 @@ import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureIssue
 import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
+import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
 import com.zoran.aihomedesigner.domain.PlanPoint
@@ -94,6 +96,8 @@ fun PlanScreen(
     rooms: List<Room>?,
     openings: List<Opening>,
     furniture: List<Furniture> = emptyList(),
+    planImage: PlanImage? = null,
+    planBitmap: ImageBitmap? = null,
     onBack: () -> Unit,
     onMoveRoom: (String, Double, Double) -> Unit,
     onPlaceUnplaced: () -> Unit,
@@ -194,10 +198,12 @@ fun PlanScreen(
     fun fitToView() {
         val placed = currentRooms
         if (viewSize.width <= 0 || viewSize.height <= 0 || placed.isEmpty()) return
-        val minX = placed.minOf { it.xM!! }
-        val minY = placed.minOf { it.yM!! }
-        val maxX = placed.maxOf { it.xM!! + it.lengthM }
-        val maxY = placed.maxOf { it.yM!! + it.widthM }
+        // Podloga (slika plana) ulazi u prikaz, da se vidi cela zajedno sa sobama
+        val image = planImage
+        val minX = min(placed.minOf { it.xM!! }, image?.originXM ?: Double.MAX_VALUE)
+        val minY = min(placed.minOf { it.yM!! }, image?.originYM ?: Double.MAX_VALUE)
+        val maxX = max(placed.maxOf { it.xM!! + it.lengthM }, image?.let { it.originXM + it.widthM } ?: -Double.MAX_VALUE)
+        val maxY = max(placed.maxOf { it.yM!! + it.widthM }, image?.let { it.originYM + it.heightM } ?: -Double.MAX_VALUE)
         val margin = 48f
         val boundsW = max((maxX - minX).toFloat(), 1f)
         val boundsH = max((maxY - minY).toFloat(), 1f)
@@ -440,6 +446,32 @@ fun PlanScreen(
                         }
                     }
             ) {
+                // Podloga: slika plana ispod soba, polu providna, u razmeri iz kalibracije
+                val image = planImage
+                if (image != null && planBitmap != null) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawImage(
+                            image = planBitmap,
+                            dstOffset = IntOffset(
+                                (offset.x + image.originXM * scale).roundToInt(),
+                                (offset.y + image.originYM * scale).roundToInt()
+                            ),
+                            dstSize = IntSize(
+                                (image.widthM * scale).roundToInt().coerceAtLeast(1),
+                                (image.heightM * scale).roundToInt().coerceAtLeast(1)
+                            ),
+                            alpha = 0.55f
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.plan_image_legend),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
+                    )
+                }
+
                 displayRooms.forEach { room ->
                     PlanRoom(
                         room = room,
