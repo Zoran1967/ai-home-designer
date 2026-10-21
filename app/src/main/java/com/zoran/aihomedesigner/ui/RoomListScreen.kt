@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
+import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.Room
 
 @Composable
@@ -41,11 +42,15 @@ fun RoomListScreen(
     onOpenRoom: (Room) -> Unit,
     onOpenPlan: () -> Unit,
     onOpenScene3D: () -> Unit,
+    planImage: PlanImage?,
+    onImportPlanImage: () -> Unit,
+    onRemovePlanImage: () -> Unit,
     onOpenOpenings: (Room) -> Unit,
     onOpenFurniture: (Room) -> Unit,
     onDeleteRoom: (Room) -> Unit
 ) {
     var roomToDelete by remember { mutableStateOf<Room?>(null) }
+    var confirmRemoveImage by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -80,8 +85,48 @@ fun RoomListScreen(
             Text(
                 text = projectName,
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 4.dp)
             )
+            Text(
+                text = if (planImage == null) {
+                    stringResource(R.string.plan_image_none)
+                } else {
+                    stringResource(R.string.plan_image_info, formatArea(planImage.metersPerPixel * 100.0))
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onImportPlanImage) {
+                    Text(
+                        stringResource(
+                            if (planImage == null) R.string.plan_image_import else R.string.plan_image_replace
+                        )
+                    )
+                }
+                if (planImage != null) {
+                    TextButton(onClick = { confirmRemoveImage = true }) {
+                        Text(stringResource(R.string.plan_image_remove))
+                    }
+                }
+            }
+            if (confirmRemoveImage) {
+                AlertDialog(
+                    onDismissRequest = { confirmRemoveImage = false },
+                    title = { Text(stringResource(R.string.plan_image_remove_title)) },
+                    text = { Text(stringResource(R.string.plan_image_remove_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            onRemovePlanImage()
+                            confirmRemoveImage = false
+                        }) { Text(stringResource(R.string.delete)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirmRemoveImage = false }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
 
             when {
                 rooms == null -> Unit // još se učitava

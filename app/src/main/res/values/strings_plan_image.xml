@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_image_none">Slika plana nije uvezena.</string>
+    <string name="plan_image_info">Slika plana je uvezena. Razmera: 1 piksel = %1$s cm (kalibrisano).</string>
+    <string name="plan_image_import">Uvezi sliku plana</string>
+    <string name="plan_image_replace">Zameni sliku plana</string>
+    <string name="plan_image_remove">Ukloni sliku</string>
+    <string name="plan_image_remove_title">Uklanjanje slike plana</string>
+    <string name="plan_image_remove_message">Ukloniti sliku plana? Sobe, vrata i nameštaj ostaju.</string>
+    <string name="plan_image_import_failed">Slika se ne može koristiti. Izaberite sliku (JPG ili PNG) manju od 40 MB.</string>
+</resources>

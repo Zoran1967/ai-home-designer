@@ -1,8 +1,12 @@
 package com.zoran.aihomedesigner
 
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -13,14 +17,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.zoran.aihomedesigner.data.ImportedImage
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
+import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.ui.CalibrationScreen
 import com.zoran.aihomedesigner.ui.CrashScreen
 import com.zoran.aihomedesigner.ui.CreateProjectScreen
 import com.zoran.aihomedesigner.ui.FurnitureFormScreen
@@ -43,6 +52,7 @@ private enum class Screen {
     EDIT_ROOM,
     PLAN,
     SCENE3D,
+    CALIBRATE,
     OPENINGS,
     CREATE_OPENING,
     EDIT_OPENING,
@@ -77,6 +87,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Čuva sliku koja čeka kalibraciju, da preživi okretanje ekrana. */
+private val ImportedImageSaver = listSaver<ImportedImage?, Any>(
+    save = { image ->
+        if (image == null) emptyList() else listOf(image.fileName, image.widthPx, image.heightPx)
+    },
+    restore = { list ->
+        if (list.size == 3) ImportedImage(list[0] as String, list[1] as Int, list[2] as Int) else null
+    }
+)
+
 @Composable
 private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     var screen by rememberSaveable { mutableStateOf(Screen.PROJECTS) }
@@ -87,6 +107,30 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
     val projects by viewModel.projects.collectAsState()
     val selectedProject = projects?.firstOrNull { it.id == selectedProjectId }
+
+    val context = LocalContext.current
+    var pendingImage by rememberSaveable(stateSaver = ImportedImageSaver) {
+        mutableStateOf<ImportedImage?>(null)
+    }
+    val planImageFlow = remember(selectedProjectId) {
+        selectedProjectId?.let { viewModel.observePlanImage(it) } ?: flowOf<PlanImage?>(null)
+    }
+    val planImage by planImageFlow.collectAsState(initial = null)
+
+    // Izbor slike plana iz galerije: slika se kopira u aplikaciju, pa ide na kalibraciju razmere.
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        val projectId = selectedProjectId
+        if (uri != null && projectId != null) {
+            viewModel.importPlanImage(projectId, uri) { imported ->
+                if (imported != null) {
+                    pendingImage = imported
+                    screen = Screen.CALIBRATE
+                } else {
+                    Toast.makeText(context, R.string.plan_image_import_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     val roomsFlow = remember(selectedProjectId) {
         selectedProjectId?.let { viewModel.observeRooms(it) } ?: flowOf<List<Room>?>(null)
@@ -129,9 +173,16 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         }
     }
 
+    // Odustajanje od kalibracije (dugme nazad) briše kopiju slike.
+    BackHandler(enabled = screen == Screen.CALIBRATE) {
+        pendingImage?.let { viewModel.discardImportedImage(it) }
+        pendingImage = null
+        screen = Screen.ROOMS
+    }
+
     // Ako je izabrani projekat, soba ili otvor nestao (npr. obrisan), vrati se korak nazad.
     LaunchedEffect(
-        projects, rooms, roomOpenings, roomFurniture,
+        projects, rooms, roomOpenings, roomFurniture, pendingImage,
         selectedProjectId, selectedRoomId, selectedOpeningId, selectedFurnitureId, screen
     ) {
         val needsProject = screen != Screen.PROJECTS && screen != Screen.CREATE_PROJECT
@@ -147,6 +198,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
             screen = Screen.OPENINGS
         } else if (screen == Screen.EDIT_FURNITURE && roomFurniture != null && furnitureToEdit == null) {
             screen = Screen.FURNITURE
+        } else if (screen == Screen.CALIBRATE && pendingImage == null) {
+            screen = Screen.ROOMS
         }
     }
 
@@ -182,6 +235,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 },
                 onOpenPlan = { screen = Screen.PLAN },
                 onOpenScene3D = { screen = Screen.SCENE3D },
+                planImage = planImage,
+                onImportPlanImage = { pickImage.launch("image/*") },
+                onRemovePlanImage = { selectedProjectId?.let { viewModel.deletePlanImage(it) } },
                 onOpenOpenings = {
                     selectedRoomId = it.id
                     screen = Screen.OPENINGS
@@ -310,6 +366,28 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     onSubmit = { input, onResult -> viewModel.updateFurniture(item.id, input, onResult) },
                     onDone = { screen = Screen.FURNITURE },
                     onCancel = { screen = Screen.FURNITURE }
+                )
+            }
+        }
+
+        Screen.CALIBRATE -> {
+            val image = pendingImage
+            val projectId = selectedProjectId
+            if (image != null && projectId != null) {
+                CalibrationScreen(
+                    image = image,
+                    loadBitmap = { name, maxSide -> viewModel.loadPlanBitmap(name, maxSide) },
+                    onSave = { metersPerPixel ->
+                        viewModel.savePlanCalibration(projectId, image, metersPerPixel) {
+                            pendingImage = null
+                            screen = Screen.ROOMS
+                        }
+                    },
+                    onCancel = {
+                        viewModel.discardImportedImage(image)
+                        pendingImage = null
+                        screen = Screen.ROOMS
+                    }
                 )
             }
         }
