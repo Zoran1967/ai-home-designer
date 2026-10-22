@@ -33,7 +33,9 @@ import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureCategory
 import com.zoran.aihomedesigner.domain.FurnitureIssue
 import com.zoran.aihomedesigner.domain.FurniturePassages
+import com.zoran.aihomedesigner.domain.NarrowPassage
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.WallSide
 
 @Composable
 fun furnitureCategoryLabel(category: FurnitureCategory): String = when (category) {
@@ -59,6 +61,7 @@ fun FurnitureListScreen(
     onDelete: (Furniture) -> Unit
 ) {
     var itemToDelete by remember { mutableStateOf<Furniture?>(null) }
+    val warnings = FurniturePassages.find(room, furniture.orEmpty())
 
     Scaffold(
         floatingActionButton = {
@@ -106,7 +109,6 @@ fun FurnitureListScreen(
                 }
 
                 else -> {
-                    val gaps = FurniturePassages.narrowGaps(furniture)
                     issues.forEach { issue ->
                         Text(
                             text = issueText(issue, furniture),
@@ -115,18 +117,18 @@ fun FurnitureListScreen(
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
-                    gaps.forEach { gap ->
-                        val nameA = furniture.firstOrNull { it.id == gap.furnitureAId }?.name ?: "?"
-                        val nameB = furniture.firstOrNull { it.id == gap.furnitureBId }?.name ?: "?"
+                    warnings.forEach { warning ->
                         Text(
-                            text = stringResource(
-                                R.string.furniture_gap_note,
-                                nameA,
-                                nameB,
-                                formatCentimeters(gap.gapM)
-                            ),
+                            text = narrowPassageText(warning, furniture),
+                            color = MaterialTheme.colorScheme.tertiary,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    if (warnings.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.furniture_warnings_note),
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                     Text(
@@ -175,6 +177,26 @@ fun FurnitureListScreen(
                 }
             }
         )
+    }
+}
+
+/** Tekst upozorenja o uskom prolazu (preporuka, ne greška). */
+@Composable
+fun narrowPassageText(passage: NarrowPassage, furniture: List<Furniture>): String {
+    fun name(id: String): String = furniture.firstOrNull { it.id == id }?.name ?: "?"
+    val gap = formatCentimeters(passage.gapM)
+    val recommended = formatCentimeters(FurniturePassages.MIN_PASSAGE_M)
+    val other = passage.otherFurnitureId
+    return if (other != null) {
+        stringResource(R.string.furniture_warning_pair, name(passage.furnitureId), name(other), gap, recommended)
+    } else {
+        val wall = when (passage.wall ?: WallSide.NORTH) {
+            WallSide.NORTH -> stringResource(R.string.wall_gen_north)
+            WallSide.EAST -> stringResource(R.string.wall_gen_east)
+            WallSide.SOUTH -> stringResource(R.string.wall_gen_south)
+            WallSide.WEST -> stringResource(R.string.wall_gen_west)
+        }
+        stringResource(R.string.furniture_warning_wall, name(passage.furnitureId), wall, gap, recommended)
     }
 }
 

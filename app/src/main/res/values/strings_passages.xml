@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wall_gen_north">severnog zida</string>
+    <string name="wall_gen_east">istočnog zida</string>
+    <string name="wall_gen_south">južnog zida</string>
+    <string name="wall_gen_west">zapadnog zida</string>
+    <string name="furniture_warning_pair">Razmak između „%1$s“ i „%2$s“ je %3$s cm. Preporuka je najmanje %4$s cm da bi se moglo proći.</string>
+    <string name="furniture_warning_wall">Razmak između „%1$s“ i %2$s je %3$s cm. Preporuka je najmanje %4$s cm da bi se moglo proći.</string>
+    <string name="furniture_warnings_note">Ovo su preporuke, a ne greške. Predmet koji namerno stoji blizu zida može da ostane tako.</string>
+</resources>

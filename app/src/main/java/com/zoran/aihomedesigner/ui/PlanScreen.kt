@@ -60,6 +60,8 @@ import com.zoran.aihomedesigner.domain.DoorSwingShape
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureIssue
 import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
+import com.zoran.aihomedesigner.domain.FurniturePassages
+import com.zoran.aihomedesigner.domain.NarrowPassage
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.OpeningType
@@ -157,6 +159,10 @@ fun PlanScreen(
             displayFurniture.filter { it.roomId == room.id },
             openings.filter { it.roomId == room.id }
         )
+    }
+    // Preporuke o uskim prolazima između nameštaja (nisu greške)
+    val furnitureWarnings: List<NarrowPassage> = displayRooms.flatMap { room ->
+        FurniturePassages.find(room, displayFurniture.filter { it.roomId == room.id })
     }
     val furnitureWithIssues: Set<String> = furnitureIssues.flatMap { issue ->
         when (issue) {
@@ -649,6 +655,22 @@ fun PlanScreen(
                         text = stringResource(R.string.plan_issue_more, furnitureIssues.size - MAX_ISSUES_SHOWN),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                furnitureWarnings.take(2).forEach { warning ->
+                    Text(
+                        text = narrowPassageText(warning, displayFurniture),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+                if (furnitureWarnings.size > 2) {
+                    Text(
+                        text = stringResource(R.string.plan_issue_more, furnitureWarnings.size - 2),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
 
