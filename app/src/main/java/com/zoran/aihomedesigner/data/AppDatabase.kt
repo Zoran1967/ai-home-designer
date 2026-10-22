@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         FurnitureEntity::class,
         PlanImageEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -141,6 +141,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Verzija 6 -> 7: dodaje sprat sobe (floorLevel). Sve postojeće sobe ostaju u prizemlju (0).
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `rooms` ADD COLUMN `floorLevel` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -151,7 +160,10 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "ai_home_designer.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7
+                    )
                     .build()
                     .also { instance = it }
             }
