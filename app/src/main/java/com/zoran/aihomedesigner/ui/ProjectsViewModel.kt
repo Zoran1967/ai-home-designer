@@ -71,10 +71,11 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     fun createRoom(
         projectId: String,
         input: RoomInput,
-        onResult: (RoomSaveResult) -> Unit
+        onResult: (RoomSaveResult) -> Unit,
+        floorLevel: Int = 0
     ) {
         viewModelScope.launch {
-            onResult(roomRepository.createRoom(projectId, input))
+            onResult(roomRepository.createRoom(projectId, input, floorLevel = floorLevel))
         }
     }
 

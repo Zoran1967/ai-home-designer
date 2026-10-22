@@ -1,6 +1,7 @@
 package com.zoran.aihomedesigner.data
 
 import com.zoran.aihomedesigner.domain.DimensionSource
+import com.zoran.aihomedesigner.domain.Floors
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.RoomInputErrors
@@ -30,13 +31,18 @@ class RoomRepository(private val dao: RoomDao) {
     suspend fun createRoom(
         projectId: String,
         input: RoomInput,
-        nowMillis: Long = System.currentTimeMillis()
+        nowMillis: Long = System.currentTimeMillis(),
+        floorLevel: Int = 0
     ): RoomSaveResult {
         val validation = RoomValidator.validate(input, dao.getNamesByProject(projectId))
         return when (validation) {
             is RoomValidation.Invalid -> RoomSaveResult.Invalid(validation.errors)
             is RoomValidation.Valid -> {
-                val existing = dao.getByProject(projectId).mapNotNull { it.toDomainOrNull() }
+                val level = floorLevel.coerceIn(Floors.MIN_LEVEL, Floors.MAX_LEVEL)
+                // Položaj se računa samo u odnosu na sobe istog sprata
+                val existing = dao.getByProject(projectId)
+                    .mapNotNull { it.toDomainOrNull() }
+                    .filter { it.floorLevel == level }
                 val position = RoomPlacement.nextPosition(existing)
                 val room = Room(
                     id = Room.newId(),
@@ -49,7 +55,8 @@ class RoomRepository(private val dao: RoomDao) {
                     dimensionSource = DimensionSource.USER_CONFIRMED,
                     createdAtMillis = nowMillis,
                     xM = position.xM,
-                    yM = position.yM
+                    yM = position.yM,
+                    floorLevel = level
                 )
                 dao.insert(room.toEntity())
                 RoomSaveResult.Success(room)
@@ -101,7 +108,7 @@ class RoomRepository(private val dao: RoomDao) {
     /** Daje položaj sobama koje ga još nemaju (npr. sobe napravljene pre uvođenja plana). */
     suspend fun placeUnplacedRooms(projectId: String) {
         val rooms = dao.getByProject(projectId).mapNotNull { it.toDomainOrNull() }
-        for (placed in RoomPlacement.autoPlace(rooms)) {
+        for (placed in RoomPlacement.autoPlaceByFloor(rooms)) {
             dao.updatePosition(placed.id, placed.xM!!, placed.yM!!)
         }
     }

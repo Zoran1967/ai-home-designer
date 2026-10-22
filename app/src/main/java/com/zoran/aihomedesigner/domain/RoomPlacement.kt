@@ -48,6 +48,13 @@ object RoomPlacement {
         return changed
     }
 
+    /**
+     * Isto što i [autoPlace], ali posebno za svaki sprat: nova soba se postavlja desno od soba istog sprata,
+     * a ne desno od soba sa drugih spratova.
+     */
+    fun autoPlaceByFloor(rooms: List<Room>): List<Room> =
+        rooms.groupBy { it.floorLevel }.values.flatMap { autoPlace(it) }
+
     /** Zaokružuje na korak od 5 cm (za prevlačenje prstom). */
     fun snapToGrid(value: Double): Double = Math.round(value * 20.0) / 20.0
 
