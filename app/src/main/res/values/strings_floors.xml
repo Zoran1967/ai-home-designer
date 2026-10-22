@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="floor_ground">Prizemlje</string>
+    <string name="floor_upper">%1$d. sprat</string>
+    <string name="floor_basement">Podrum</string>
+    <string name="floor_basement_n">%1$d. podrum</string>
+    <string name="floor_add_above">+ Sprat iznad</string>
+    <string name="floor_add_below">+ Podrum ispod</string>
+</resources>

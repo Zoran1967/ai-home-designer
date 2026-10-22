@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zoran.aihomedesigner.data.ImportedImage
+import com.zoran.aihomedesigner.domain.Floors
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.export.PlanExporter
 import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
@@ -111,6 +113,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     var selectedRoomId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedOpeningId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedFloor by rememberSaveable { mutableIntStateOf(0) }
 
     val projects by viewModel.projects.collectAsState()
     val selectedProject = projects?.firstOrNull { it.id == selectedProjectId }
@@ -144,6 +147,12 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     }
     val rooms by roomsFlow.collectAsState(initial = null)
     val selectedRoom = rooms?.firstOrNull { it.id == selectedRoomId }
+
+    // Sobe izabranog sprata. Plan, 3D prikaz i izvoz rade sa spratom koji je izabran u listi soba.
+    val floorRooms = rooms?.filter { it.floorLevel == selectedFloor }
+    val floorLevels = (Floors.levels(rooms.orEmpty()) + selectedFloor).distinct().sorted()
+    val nextFloorAbove = (floorLevels.max() + 1).takeIf { Floors.isValidLevel(it) }
+    val nextFloorBelow = (floorLevels.min() - 1).takeIf { Floors.isValidLevel(it) }
 
     // Otvori izabrane sobe (za ekran vrata i prozora) i svi otvori projekta (za plan).
     val roomOpeningsFlow = remember(selectedRoomId) {
@@ -181,7 +190,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     context.getString(R.string.export_note_layout),
                     context.getString(R.string.export_note_dimensions)
                 ),
-                rooms = rooms.orEmpty(),
+                rooms = floorRooms.orEmpty(),
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
                 format = format
@@ -248,6 +257,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
             onNewProject = { screen = Screen.CREATE_PROJECT },
             onOpenProject = {
                 selectedProjectId = it.id
+                selectedFloor = 0
                 screen = Screen.ROOMS
             },
             onDeleteProject = { viewModel.deleteProject(it.id) }
@@ -262,7 +272,12 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         Screen.ROOMS -> selectedProject?.let { project ->
             RoomListScreen(
                 projectName = project.name,
-                rooms = rooms,
+                rooms = floorRooms,
+                floorLevels = floorLevels,
+                selectedFloor = selectedFloor,
+                onSelectFloor = { selectedFloor = it },
+                onAddFloorAbove = nextFloorAbove?.let { level -> { selectedFloor = level } },
+                onAddFloorBelow = nextFloorBelow?.let { level -> { selectedFloor = level } },
                 onBack = {
                     selectedProjectId = null
                     screen = Screen.PROJECTS
@@ -294,7 +309,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
         Screen.CREATE_ROOM -> selectedProject?.let { project ->
             RoomFormScreen(
                 initialRoom = null,
-                onSubmit = { input, onResult -> viewModel.createRoom(project.id, input, onResult) },
+                onSubmit = { input, onResult ->
+                    viewModel.createRoom(project.id, input, onResult, floorLevel = selectedFloor)
+                },
                 onDone = { screen = Screen.ROOMS },
                 onCancel = { screen = Screen.ROOMS }
             )
@@ -315,7 +332,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 value = planImage?.let { viewModel.loadPlanBitmap(it.fileName, 2048)?.asImageBitmap() }
             }
             PlanScreen(
-                rooms = rooms,
+                rooms = floorRooms,
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
                 planImage = planImage,
@@ -330,7 +347,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
         Screen.SCENE3D -> selectedProject?.let {
             Scene3DScreen(
-                rooms = rooms,
+                rooms = floorRooms,
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
                 onBack = { screen = Screen.ROOMS }

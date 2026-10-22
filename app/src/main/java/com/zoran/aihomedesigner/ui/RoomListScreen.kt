@@ -1,6 +1,8 @@
 package com.zoran.aihomedesigner.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -47,6 +50,11 @@ fun RoomListScreen(
     onRemovePlanImage: () -> Unit,
     onExportPng: () -> Unit,
     onExportPdf: () -> Unit,
+    floorLevels: List<Int>,
+    selectedFloor: Int,
+    onSelectFloor: (Int) -> Unit,
+    onAddFloorAbove: (() -> Unit)?,
+    onAddFloorBelow: (() -> Unit)?,
     onOpenOpenings: (Room) -> Unit,
     onOpenFurniture: (Room) -> Unit,
     onDeleteRoom: (Room) -> Unit
@@ -89,6 +97,25 @@ fun RoomListScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
+            // Izbor sprata: sobe, plan i izvoz odnose se na izabrani sprat
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.horizontalScroll(rememberScrollState())
+            ) {
+                floorLevels.forEach { level ->
+                    if (level == selectedFloor) {
+                        FilledTonalButton(onClick = { onSelectFloor(level) }) { Text(floorLabel(level)) }
+                    } else {
+                        TextButton(onClick = { onSelectFloor(level) }) { Text(floorLabel(level)) }
+                    }
+                }
+                if (onAddFloorAbove != null) {
+                    TextButton(onClick = onAddFloorAbove) { Text(stringResource(R.string.floor_add_above)) }
+                }
+                if (onAddFloorBelow != null) {
+                    TextButton(onClick = onAddFloorBelow) { Text(stringResource(R.string.floor_add_below)) }
+                }
+            }
             Text(
                 text = if (planImage == null) {
                     stringResource(R.string.plan_image_none)
@@ -253,4 +280,13 @@ private fun RoomCard(
             }
         }
     }
+}
+
+/** Naziv sprata za prikaz: 0 je prizemlje, 1 prvi sprat, -1 podrum. */
+@Composable
+fun floorLabel(level: Int): String = when {
+    level == 0 -> stringResource(R.string.floor_ground)
+    level > 0 -> stringResource(R.string.floor_upper, level)
+    level == -1 -> stringResource(R.string.floor_basement)
+    else -> stringResource(R.string.floor_basement_n, -level)
 }
