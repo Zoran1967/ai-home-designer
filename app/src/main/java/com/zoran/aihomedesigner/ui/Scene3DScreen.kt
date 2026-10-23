@@ -68,8 +68,9 @@ fun Scene3DScreen(
     val minY = boxes.minOfOrNull { it.min.y } ?: 0.0
     val maxY = boxes.maxOfOrNull { it.max.y } ?: 0.0
     val maxZ = boxes.maxOfOrNull { it.max.z } ?: 0.0
-    val target = Vec3((minX + maxX) / 2, (minY + maxY) / 2, maxZ / 3)
-    val extent = max(max(maxX - minX, maxY - minY), 3.0)
+    val minZ = boxes.minOfOrNull { it.min.z } ?: 0.0
+    val target = Vec3((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2)
+    val extent = max(max(max(maxX - minX, maxY - minY), maxZ - minZ), 3.0)
     val initialDistance = (extent * 1.8 + 3.0).toFloat()
 
     val sceneKey = Triple(placedRooms.size, (extent * 10).toInt(), boxes.size)

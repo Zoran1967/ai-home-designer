@@ -347,7 +347,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
         Screen.SCENE3D -> selectedProject?.let {
             Scene3DScreen(
-                rooms = floorRooms,
+                rooms = rooms,
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
                 onBack = { screen = Screen.ROOMS }
