@@ -43,14 +43,15 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Struktura koda (`app/src/main/java/com/zoran/aihomedesigner`)
 
-- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`) i 3D (`Scene3D.kt`: `SceneBuilder`, `Camera3D.kt`: `Projection`).
+- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`), razmeštaj izvoza (`PlanExportLayout`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`).
 - `data/`: Room baza (`AppDatabase`, `*Entity`, `*Dao`, `*Mapper`, `*Repository`).
+- `export/`: crtanje plana u PNG i PDF (`PlanRenderer`, `PlanExporter`) i deljenje preko `FileProvider`-a (podešen u `AndroidManifest.xml` i `res/xml/file_paths.xml`).
 - `ui/`: ekrani i `ProjectsViewModel`. Navigacija je u `MainActivity.kt` (enum `Screen`, bez biblioteke za navigaciju).
 - Koordinatni sistem: `docs/koordinatni-sistem.md`. Nameštaj se meri od gornjeg levog ugla sobe, a sobe od početka plana.
 
 ## Baza
 
-- Trenutna verzija je 5. Migracije 1 do 5 su u `AppDatabase.kt`.
+- Trenutna verzija je 7. Migracije 1 do 7 su u `AppDatabase.kt`. Tabele: projekti, sobe (sa spratom i položajem), otvori, nameštaj, slike plana.
 - Svaka izmena šeme podiže verziju i dodaje migraciju koja ne briše podatke. SQL u migraciji mora tačno da odgovara onome što Room očekuje za entitet.
 - Nikada `fallbackToDestructiveMigration`. Migraciju proverava samo telefon (ne automatski test), pa se menja šema uvek u posebnom malom zipu.
 - Ako Room javi "cannot verify the data integrity", baza ne odgovara kodu. Prvo utvrdi uzrok, a brisanje podataka je krajnja mera.
@@ -61,7 +62,7 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Šta se proverava automatski (jedinični testovi)
 
-Mere i unos, provere plana, vrata, nameštaj, geometrija, 3D projekcija i pretvaranje podataka za bazu. Ekrani i gestovi se proveravaju ručno na telefonu.
+Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi, kalibracija razmere, razmeštaj izvoza, geometrija, 3D projekcija i pretvaranje podataka za bazu. Ekrani i gestovi se proveravaju ručno na telefonu.
 
 ## Redosled razvoja
 
@@ -72,6 +73,6 @@ Mere i unos, provere plana, vrata, nameštaj, geometrija, 3D projekcija i pretva
 5. Geometrijska provera i povezane sobe, vrata i prozori (gotovo).
 6. Nameštaj i provera sudara (gotovo).
 7. Interaktivni 3D prikaz (gotovo, jednostavan).
-8. Uvoz plana i kalibracija razmere.
+8. Uvoz plana i kalibracija razmere (gotovo za slike; PDF i automatsko prepoznavanje zidova nisu urađeni).
 9. AI vizuelizacija (opciono, bez ključeva u aplikaciji).
 10. Skeniranje i napredne funkcije.
