@@ -3,61 +3,76 @@ package com.zoran.aihomedesigner.domain
 import kotlin.math.max
 import kotlin.math.min
 
-/** Uzak razmak između dva predmeta nameštaja, u metrima. */
-data class NarrowGap(val furnitureAId: String, val furnitureBId: String, val gapM: Double)
+/**
+ * Uzak prolaz između nameštaja: razmak koji liči na prolaz, ali je uži od preporučenog.
+ * Ako je [otherFurnitureId] null, razmak je između predmeta i zida sobe [wall].
+ */
+data class NarrowPassage(
+    val furnitureId: String,
+    val otherFurnitureId: String?,
+    val wall: WallSide?,
+    val gapM: Double
+)
 
 /**
- * Nalazi uske razmake između predmeta nameštaja u jednoj sobi (razmak je manji od [MIN_PASSAGE_M]).
- * To je napomena, a ne greška: aplikacija ne zna gde ljudi zaista prolaze, pa samo javlja gde bi prolaz,
- * ako ga ima, bio uži od 60 cm. Predmeti koji se dodiruju (razmak do 2 cm) i predmeti koji se preklapaju
- * (to je posebna greška) ne računaju se. Stolica uz sto ili radni sto se ne prijavljuje, jer je tu mali
- * razmak uobičajen.
+ * Traži uske prolaze u jednoj sobi. Ovo je PREPORUKA, a ne greška: predmet blizu zida ili drugog predmeta
+ * može da bude namerno tako postavljen. Proverava samo razmake koji su duži od [MIN_FACING_M] duž
+ * susedne ivice, a ne proverava da li se kroz razmak stvarno prolazi.
  */
 object FurniturePassages {
 
-    /** Najmanja širina prolaza, u metrima (60 cm). */
+    /** Preporučena najmanja širina prolaza (60 cm). Razmak jednak ovoj vrednosti je dovoljan. */
     const val MIN_PASSAGE_M = 0.6
 
-    /** Predmeti čiji je razmak do 2 cm smatraju se postavljenim jedan uz drugi. */
-    const val TOUCHING_M = 0.02
+    /** Razmaci kraći od ovoga (20 cm) ne liče na prolaz, pa se ne prijavljuju. */
+    const val MIN_GAP_M = 0.2
 
-    /** Predmeti se "gledaju" ako se preklapaju bar 30 cm duž stranice. */
-    const val MIN_FACING_LENGTH_M = 0.3
+    /** Najmanja dužina na kojoj se dve ivice "gledaju" da bi razmak imao smisla kao prolaz (50 cm). */
+    const val MIN_FACING_M = 0.5
 
     private const val EPS = RoomGeometry.EPSILON_M
 
-    fun narrowGaps(furniture: List<Furniture>): List<NarrowGap> {
-        val result = mutableListOf<NarrowGap>()
+    private fun isNarrow(gap: Double): Boolean = gap >= MIN_GAP_M - EPS && gap < MIN_PASSAGE_M - EPS
+
+    fun find(room: Room, furniture: List<Furniture>): List<NarrowPassage> {
+        val rects = furniture.map { FurnitureGeometry.rect(it) }
+        val result = mutableListOf<NarrowPassage>()
+
         for (i in furniture.indices) {
             for (j in i + 1 until furniture.size) {
-                val a = furniture[i]
-                val b = furniture[j]
-                if (isSeatingPair(a, b)) continue
-                val ra = FurnitureGeometry.rect(a)
-                val rb = FurnitureGeometry.rect(b)
-                if (FurnitureGeometry.intersects(ra, rb)) continue
+                val a = rects[i]
+                val b = rects[j]
+                if (FurnitureGeometry.intersects(a, b)) continue // preklapanje prijavljuje druga provera
 
-                val gapX = max(rb.x0 - ra.x1, ra.x0 - rb.x1)
-                val overlapY = min(ra.y1, rb.y1) - max(ra.y0, rb.y0)
-                val gapY = max(rb.y0 - ra.y1, ra.y0 - rb.y1)
-                val overlapX = min(ra.x1, rb.x1) - max(ra.x0, rb.x0)
-
-                val gap = when {
-                    isNarrow(gapX) && overlapY >= MIN_FACING_LENGTH_M - EPS -> gapX
-                    isNarrow(gapY) && overlapX >= MIN_FACING_LENGTH_M - EPS -> gapY
-                    else -> null
+                val facingY = min(a.y1, b.y1) - max(a.y0, b.y0)
+                val gapX = max(b.x0 - a.x1, a.x0 - b.x1)
+                if (facingY >= MIN_FACING_M - EPS && isNarrow(gapX)) {
+                    result += NarrowPassage(furniture[i].id, furniture[j].id, null, gapX)
+                    continue
                 }
-                if (gap != null) result += NarrowGap(a.id, b.id, RoomPlacement.roundToMm(gap))
+
+                val facingX = min(a.x1, b.x1) - max(a.x0, b.x0)
+                val gapY = max(b.y0 - a.y1, a.y0 - b.y1)
+                if (facingX >= MIN_FACING_M - EPS && isNarrow(gapY)) {
+                    result += NarrowPassage(furniture[i].id, furniture[j].id, null, gapY)
+                }
+            }
+        }
+
+        for (i in furniture.indices) {
+            val r = rects[i]
+            val id = furniture[i].id
+            val alongX = r.x1 - r.x0
+            val alongY = r.y1 - r.y0
+            if (alongY >= MIN_FACING_M - EPS) {
+                if (isNarrow(r.x0)) result += NarrowPassage(id, null, WallSide.WEST, r.x0)
+                if (isNarrow(room.lengthM - r.x1)) result += NarrowPassage(id, null, WallSide.EAST, room.lengthM - r.x1)
+            }
+            if (alongX >= MIN_FACING_M - EPS) {
+                if (isNarrow(r.y0)) result += NarrowPassage(id, null, WallSide.NORTH, r.y0)
+                if (isNarrow(room.widthM - r.y1)) result += NarrowPassage(id, null, WallSide.SOUTH, room.widthM - r.y1)
             }
         }
         return result
-    }
-
-    private fun isNarrow(gap: Double): Boolean = gap >= TOUCHING_M - EPS && gap < MIN_PASSAGE_M - EPS
-
-    private fun isSeatingPair(a: Furniture, b: Furniture): Boolean {
-        fun isTable(f: Furniture) = f.category == FurnitureCategory.TABLE || f.category == FurnitureCategory.DESK
-        return (a.category == FurnitureCategory.CHAIR && isTable(b)) ||
-            (b.category == FurnitureCategory.CHAIR && isTable(a))
     }
 }
