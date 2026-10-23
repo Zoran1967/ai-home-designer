@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
 import com.zoran.aihomedesigner.domain.Camera3D
+import com.zoran.aihomedesigner.domain.DepthOrder
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.Projection
@@ -45,12 +46,9 @@ import kotlin.math.max
 private const val DEFAULT_YAW = 30f
 private const val DEFAULT_PITCH = 35f
 
-/** Jedna vidljiva stranica kvadra, spremna za crtanje. */
-private class DrawFace(val points: List<Offset>, val sortKey: Double, val color: Color)
-
 /**
  * Interaktivni 3D prikaz cele nekretnine, napravljen iz istih podataka kao 2D plan.
- * Crta se bez dodatnih biblioteka (perspektivna projekcija i crtanje stranica od daljih ka bližim).
+ * Crta se bez dodatnih biblioteka (perspektivna projekcija i crtanje kvadara od daljih ka bližim, vidi [DepthOrder]).
  */
 @Composable
 fun Scene3DScreen(
@@ -163,14 +161,13 @@ private fun baseColor(kind: SceneKind): Color = when (kind) {
 private fun shade(color: Color, factor: Float) =
     Color(color.red * factor, color.green * factor, color.blue * factor, color.alpha)
 
-/** Crta sve vidljive stranice kvadra, od najdaljih ka najbližim. */
+/** Crta kvadre od najdaljih ka najbližim (redosled određuje [DepthOrder]), a od svakog samo stranice okrenute ka kameri. */
 private fun DrawScope.drawScene(boxes: List<SceneBox>, camera: Camera3D) {
     val w = size.width.toDouble()
     val h = size.height.toDouble()
     val eye = Projection.eye(camera)
-    val faces = mutableListOf<DrawFace>()
 
-    for (box in boxes) {
+    for (box in DepthOrder.farToNear(boxes, eye)) {
         val x0 = box.min.x; val x1 = box.max.x
         val y0 = box.min.y; val y1 = box.max.y
         val z0 = box.min.z; val z1 = box.max.z
@@ -192,20 +189,14 @@ private fun DrawScope.drawScene(boxes: List<SceneBox>, camera: Camera3D) {
             val projected = corners.map { Projection.project(it, camera, w, h) }
             if (projected.any { it == null }) continue
             val points = projected.map { Offset(it!!.x.toFloat(), it.y.toFloat()) }
-            var depth = projected.sumOf { it!!.depth } / 4
-            // Vrata i prozori se crtaju posle zida u koji su ugrađeni
-            if (box.kind == SceneKind.DOOR || box.kind == SceneKind.WINDOW) depth -= 1.0
-            faces += DrawFace(points, depth, shade(baseColor(box.kind), light))
-        }
-    }
 
-    for (face in faces.sortedByDescending { it.sortKey }) {
-        val path = Path().apply {
-            moveTo(face.points[0].x, face.points[0].y)
-            for (i in 1 until face.points.size) lineTo(face.points[i].x, face.points[i].y)
-            close()
+            val path = Path().apply {
+                moveTo(points[0].x, points[0].y)
+                for (i in 1 until points.size) lineTo(points[i].x, points[i].y)
+                close()
+            }
+            drawPath(path, shade(baseColor(box.kind), light))
+            drawPath(path, Color(0x55000000), style = Stroke(width = 1f))
         }
-        drawPath(path, face.color)
-        drawPath(path, Color(0x55000000), style = Stroke(width = 1f))
     }
 }
