@@ -53,7 +53,7 @@
 
     <string name="room_error_name_empty">Upišite ime sobe.</string>
     <string name="room_error_name_too_long">Ime sobe može imati najviše %1$d znakova.</string>
-    <string name="room_error_name_duplicate">Soba sa tim imenom već postoji u ovom projektu.</string>
+    <string name="room_error_name_duplicate">Soba sa tim imenom već postoji na ovom spratu.</string>
     <string name="error_dim_missing">Upišite meru.</string>
     <string name="error_dim_not_number">Upišite broj, na primer 3,5.</string>
     <string name="error_dim_too_small">Mera je premala. Najmanje %1$s m.</string>
