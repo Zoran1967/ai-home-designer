@@ -34,15 +34,18 @@ class RoomRepository(private val dao: RoomDao) {
         nowMillis: Long = System.currentTimeMillis(),
         floorLevel: Int = 0
     ): RoomSaveResult {
-        val validation = RoomValidator.validate(input, dao.getNamesByProject(projectId))
+        val level = floorLevel.coerceIn(Floors.MIN_LEVEL, Floors.MAX_LEVEL)
+        val sameFloor = dao.getByProject(projectId)
+            .mapNotNull { it.toDomainOrNull() }
+            .filter { it.floorLevel == level }
+
+        // Ime sobe mora da bude jedinstveno samo na istom spratu (npr. "Kupatilo" može i u prizemlju i na spratu)
+        val validation = RoomValidator.validate(input, sameFloor.map { it.name })
         return when (validation) {
             is RoomValidation.Invalid -> RoomSaveResult.Invalid(validation.errors)
             is RoomValidation.Valid -> {
-                val level = floorLevel.coerceIn(Floors.MIN_LEVEL, Floors.MAX_LEVEL)
                 // Položaj se računa samo u odnosu na sobe istog sprata
-                val existing = dao.getByProject(projectId)
-                    .mapNotNull { it.toDomainOrNull() }
-                    .filter { it.floorLevel == level }
+                val existing = sameFloor
                 val position = RoomPlacement.nextPosition(existing)
                 val room = Room(
                     id = Room.newId(),
@@ -71,7 +74,11 @@ class RoomRepository(private val dao: RoomDao) {
      */
     suspend fun updateRoom(roomId: String, input: RoomInput): RoomSaveResult {
         val existing = dao.getById(roomId)?.toDomainOrNull() ?: return RoomSaveResult.NotFound
-        val otherNames = dao.getNamesByProjectExcluding(existing.projectId, roomId)
+        // Imena se porede samo sa drugim sobama istog sprata
+        val otherNames = dao.getByProject(existing.projectId)
+            .mapNotNull { it.toDomainOrNull() }
+            .filter { it.id != roomId && it.floorLevel == existing.floorLevel }
+            .map { it.name }
 
         return when (val validation = RoomValidator.validate(input, otherNames)) {
             is RoomValidation.Invalid -> RoomSaveResult.Invalid(validation.errors)
