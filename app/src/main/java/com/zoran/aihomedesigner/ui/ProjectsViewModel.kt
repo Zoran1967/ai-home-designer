@@ -16,6 +16,7 @@ import com.zoran.aihomedesigner.data.OpeningSaveResult
 import com.zoran.aihomedesigner.data.ProjectRepository
 import com.zoran.aihomedesigner.data.RoomRepository
 import com.zoran.aihomedesigner.data.RoomSaveResult
+import com.zoran.aihomedesigner.domain.FloorMoveResult
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureInput
 import com.zoran.aihomedesigner.domain.Opening
@@ -92,6 +93,12 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     fun moveRoom(roomId: String, xM: Double, yM: Double) {
         viewModelScope.launch {
             roomRepository.moveRoom(roomId, xM, yM)
+        }
+    }
+
+    fun moveRoomToFloor(roomId: String, targetLevel: Int, onResult: (FloorMoveResult) -> Unit) {
+        viewModelScope.launch {
+            onResult(roomRepository.moveRoomToFloor(roomId, targetLevel))
         }
     }
 

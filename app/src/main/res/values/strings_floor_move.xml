@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="room_move_floor_button">Premesti na sprat</string>
+    <string name="room_move_floor_title">Premesti sobu „%1$s“</string>
+    <string name="room_move_floor_message">Izaberite sprat. Soba dobija novo mesto na planu tog sprata. Mere, vrata, prozori i nameštaj ostaju isti i idu sa sobom.</string>
+    <string name="room_move_floor_name_taken">Na tom spratu već postoji soba sa istim imenom. Prvo promenite ime sobe.</string>
+    <string name="room_move_floor_failed">Premeštanje nije uspelo. Soba možda više ne postoji.</string>
+    <string name="room_move_floor_close">Zatvori</string>
+</resources>

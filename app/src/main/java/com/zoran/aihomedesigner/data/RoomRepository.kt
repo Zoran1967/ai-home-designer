@@ -1,6 +1,8 @@
 package com.zoran.aihomedesigner.data
 
 import com.zoran.aihomedesigner.domain.DimensionSource
+import com.zoran.aihomedesigner.domain.FloorMove
+import com.zoran.aihomedesigner.domain.FloorMoveResult
 import com.zoran.aihomedesigner.domain.Floors
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomInput
@@ -110,6 +112,19 @@ class RoomRepository(private val dao: RoomDao) {
     suspend fun moveRoom(roomId: String, xM: Double, yM: Double) {
         if (!RoomPlacement.isValidCoordinate(xM) || !RoomPlacement.isValidCoordinate(yM)) return
         dao.updatePosition(roomId, xM, yM)
+    }
+
+    /**
+     * Prebacuje sobu na drugi sprat (provere i novi položaj računa [FloorMove]).
+     * Menja se samo sprat i položaj, a mere i izvor mera ostaju netaknuti.
+     * Vrata, prozori i nameštaj su vezani za sobu, pa idu sa njom.
+     */
+    suspend fun moveRoomToFloor(roomId: String, targetLevel: Int): FloorMoveResult {
+        val room = dao.getById(roomId)?.toDomainOrNull() ?: return FloorMoveResult.NotFound
+        val projectRooms = dao.getByProject(room.projectId).mapNotNull { it.toDomainOrNull() }
+        val result = FloorMove.move(room, targetLevel, projectRooms)
+        if (result is FloorMoveResult.Moved) dao.update(result.room.toEntity())
+        return result
     }
 
     /** Daje položaj sobama koje ga još nemaju (npr. sobe napravljene pre uvođenja plana). */

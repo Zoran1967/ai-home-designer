@@ -153,6 +153,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     val floorLevels = (Floors.levels(rooms.orEmpty()) + selectedFloor).distinct().sorted()
     val nextFloorAbove = (floorLevels.max() + 1).takeIf { Floors.isValidLevel(it) }
     val nextFloorBelow = (floorLevels.min() - 1).takeIf { Floors.isValidLevel(it) }
+    // Spratovi na koje se soba može prebaciti: postojeći, plus jedan novi iznad i jedan ispod
+    val moveTargets = (floorLevels + listOfNotNull(nextFloorAbove, nextFloorBelow))
+        .distinct().sorted().filter { it != selectedFloor }
 
     // Otvori izabrane sobe (za ekran vrata i prozora) i svi otvori projekta (za plan).
     val roomOpeningsFlow = remember(selectedRoomId) {
@@ -301,6 +304,10 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onOpenFurniture = {
                     selectedRoomId = it.id
                     screen = Screen.FURNITURE
+                },
+                moveTargets = moveTargets,
+                onMoveRoomToFloor = { room, level, onResult ->
+                    viewModel.moveRoomToFloor(room.id, level, onResult)
                 },
                 onDeleteRoom = { viewModel.deleteRoom(it.id) }
             )

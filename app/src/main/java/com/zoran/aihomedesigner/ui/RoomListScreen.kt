@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
+import com.zoran.aihomedesigner.domain.FloorMoveResult
 import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.Room
 
@@ -57,9 +58,13 @@ fun RoomListScreen(
     onAddFloorBelow: (() -> Unit)?,
     onOpenOpenings: (Room) -> Unit,
     onOpenFurniture: (Room) -> Unit,
+    moveTargets: List<Int>,
+    onMoveRoomToFloor: (Room, Int, (FloorMoveResult) -> Unit) -> Unit,
     onDeleteRoom: (Room) -> Unit
 ) {
     var roomToDelete by remember { mutableStateOf<Room?>(null) }
+    var roomToMove by remember { mutableStateOf<Room?>(null) }
+    var moveFailure by remember { mutableStateOf<FloorMoveResult?>(null) }
     var confirmRemoveImage by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -194,6 +199,7 @@ fun RoomListScreen(
                                 onOpen = { onOpenRoom(room) },
                                 onOpenOpenings = { onOpenOpenings(room) },
                                 onOpenFurniture = { onOpenFurniture(room) },
+                                onMove = if (moveTargets.isEmpty()) null else ({ roomToMove = room }),
                                 onDelete = { roomToDelete = room }
                             )
                         }
@@ -201,6 +207,55 @@ fun RoomListScreen(
                 }
             }
         }
+    }
+
+    roomToMove?.let { room ->
+        AlertDialog(
+            onDismissRequest = { roomToMove = null },
+            title = { Text(stringResource(R.string.room_move_floor_title, room.name)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.room_move_floor_message))
+                    moveTargets.forEach { level ->
+                        TextButton(onClick = {
+                            roomToMove = null
+                            onMoveRoomToFloor(room, level) { result ->
+                                if (result !is FloorMoveResult.Moved) moveFailure = result
+                            }
+                        }) { Text(floorLabel(level)) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { roomToMove = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    moveFailure?.let { failure ->
+        AlertDialog(
+            onDismissRequest = { moveFailure = null },
+            title = { Text(stringResource(R.string.room_move_floor_button)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (failure is FloorMoveResult.NameTaken) {
+                            R.string.room_move_floor_name_taken
+                        } else {
+                            R.string.room_move_floor_failed
+                        }
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { moveFailure = null }) {
+                    Text(stringResource(R.string.room_move_floor_close))
+                }
+            }
+        )
     }
 
     roomToDelete?.let { room ->
@@ -229,6 +284,7 @@ private fun RoomCard(
     onOpen: () -> Unit,
     onOpenOpenings: () -> Unit,
     onOpenFurniture: () -> Unit,
+    onMove: (() -> Unit)?,
     onDelete: () -> Unit
 ) {
     val thickness = room.wallThicknessM
@@ -273,6 +329,11 @@ private fun RoomCard(
                 }
                 TextButton(onClick = onOpenFurniture) {
                     Text(stringResource(R.string.room_furniture_button))
+                }
+                if (onMove != null) {
+                    TextButton(onClick = onMove) {
+                        Text(stringResource(R.string.room_move_floor_button))
+                    }
                 }
             }
             TextButton(onClick = onDelete) {
