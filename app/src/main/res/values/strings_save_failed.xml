@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="save_failed_title">Upis nije uspeo</string>
+    <string name="save_failed_message">Poslednja promena nije sačuvana. Moguće je da je telefon pun. Oslobodite prostor, pa probajte ponovo.</string>
+    <string name="save_failed_close">Zatvori</string>
+</resources>

@@ -3,6 +3,7 @@ package com.zoran.aihomedesigner.ui
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zoran.aihomedesigner.data.AppDatabase
@@ -26,9 +27,12 @@ import com.zoran.aihomedesigner.domain.Project
 import com.zoran.aihomedesigner.domain.PropertyType
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomInput
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -49,6 +53,32 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     val projects: StateFlow<List<Project>?> = repository.observeProjects()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    private val _saveFailed = MutableStateFlow(false)
+
+    /** Postaje true kad upis promene u bazu ne uspe (npr. pun telefon). Ekran tada prikazuje poruku. */
+    val saveFailed: StateFlow<Boolean> = _saveFailed.asStateFlow()
+
+    fun dismissSaveFailed() {
+        _saveFailed.value = false
+    }
+
+    /**
+     * Pokreće upis u bazu. Ako upis ne uspe, aplikacija se ne zatvara, nego se javlja [saveFailed].
+     * Važi za brisanja i pomeranja. Forme (nova i izmenjena soba, vrata, nameštaj, projekat) ovo još ne koriste.
+     */
+    private fun launchWrite(block: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("ProjectsViewModel", "Upis u bazu nije uspeo", e)
+                _saveFailed.value = true
+            }
+        }
+    }
+
     fun createProject(
         rawName: String,
         type: PropertyType,
@@ -60,7 +90,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteProject(id: String) {
-        viewModelScope.launch {
+        launchWrite {
             planImageRepository.deleteImage(id)
             repository.deleteProject(id)
         }
@@ -91,25 +121,25 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun moveRoom(roomId: String, xM: Double, yM: Double) {
-        viewModelScope.launch {
+        launchWrite {
             roomRepository.moveRoom(roomId, xM, yM)
         }
     }
 
     fun moveRoomToFloor(roomId: String, targetLevel: Int, onResult: (FloorMoveResult) -> Unit) {
-        viewModelScope.launch {
+        launchWrite {
             onResult(roomRepository.moveRoomToFloor(roomId, targetLevel))
         }
     }
 
     fun placeUnplacedRooms(projectId: String) {
-        viewModelScope.launch {
+        launchWrite {
             roomRepository.placeUnplacedRooms(projectId)
         }
     }
 
     fun deleteRoom(id: String) {
-        viewModelScope.launch {
+        launchWrite {
             roomRepository.deleteRoom(id)
         }
     }
@@ -141,7 +171,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteOpening(id: String) {
-        viewModelScope.launch {
+        launchWrite {
             openingRepository.deleteOpening(id)
         }
     }
@@ -173,13 +203,13 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun moveFurniture(furnitureId: String, xM: Double, yM: Double, rotationDeg: Int) {
-        viewModelScope.launch {
+        launchWrite {
             furnitureRepository.moveFurniture(furnitureId, xM, yM, rotationDeg)
         }
     }
 
     fun deleteFurniture(id: String) {
-        viewModelScope.launch {
+        launchWrite {
             furnitureRepository.deleteFurniture(id)
         }
     }
@@ -207,19 +237,19 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun discardImportedImage(image: ImportedImage) {
-        viewModelScope.launch {
+        launchWrite {
             planImageRepository.discard(image)
         }
     }
 
     fun movePlanImage(projectId: String, xM: Double, yM: Double) {
-        viewModelScope.launch {
+        launchWrite {
             planImageRepository.moveImage(projectId, xM, yM)
         }
     }
 
     fun deletePlanImage(projectId: String) {
-        viewModelScope.launch {
+        launchWrite {
             planImageRepository.deleteImage(projectId)
         }
     }

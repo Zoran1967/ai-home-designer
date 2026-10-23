@@ -10,8 +10,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zoran.aihomedesigner.data.ImportedImage
 import com.zoran.aihomedesigner.domain.Floors
@@ -463,5 +467,20 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 )
             }
         }
+    }
+
+    // Upis u bazu nije uspeo (npr. pun telefon): jasna poruka umesto zatvaranja aplikacije
+    val saveFailed by viewModel.saveFailed.collectAsState()
+    if (saveFailed) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissSaveFailed() },
+            title = { Text(stringResource(R.string.save_failed_title)) },
+            text = { Text(stringResource(R.string.save_failed_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissSaveFailed() }) {
+                    Text(stringResource(R.string.save_failed_close))
+                }
+            }
+        )
     }
 }
