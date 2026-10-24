@@ -3,9 +3,12 @@ package com.zoran.aihomedesigner.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import com.zoran.aihomedesigner.domain.DimensionSource
 import com.zoran.aihomedesigner.domain.ImageSampling
+import com.zoran.aihomedesigner.domain.PdfSizing
 import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.RoomPlacement
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +45,12 @@ class PlanImageRepository(
         val name = "plan_${projectId}_${System.currentTimeMillis()}.img"
         val target = File(directory, name)
         try {
+            // PDF: iscrtava se prva strana u sliku (ostale strane se ne uvoze)
+            if (context.contentResolver.getType(uri) == "application/pdf") {
+                val rendered = renderPdfFirstPage(uri, target, name)
+                if (rendered == null) target.delete()
+                return@withContext rendered
+            }
             val input = context.contentResolver.openInputStream(uri) ?: return@withContext null
             input.use { source -> target.outputStream().use { out -> source.copyTo(out) } }
 
@@ -64,6 +73,28 @@ class PlanImageRepository(
         } catch (e: SecurityException) {
             target.delete()
             null
+        }
+    }
+
+    /**
+     * Iscrtava prvu stranu PDF-a u PNG sa belom pozadinom. Vraća null ako PDF nema strana, ako je zaštićen
+     * lozinkom ili oštećen.
+     */
+    private fun renderPdfFirstPage(uri: Uri, target: File, name: String): ImportedImage? {
+        val descriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+        descriptor.use { pfd ->
+            PdfRenderer(pfd).use { renderer ->
+                if (renderer.pageCount < 1) return null
+                renderer.openPage(0).use { page ->
+                    val size = PdfSizing.sizeFor(page.width, page.height) ?: return null
+                    val bitmap = Bitmap.createBitmap(size.widthPx, size.heightPx, Bitmap.Config.ARGB_8888)
+                    bitmap.eraseColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    target.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    bitmap.recycle()
+                    return ImportedImage(name, size.widthPx, size.heightPx)
+                }
+            }
         }
     }
 
