@@ -43,7 +43,7 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Struktura koda (`app/src/main/java/com/zoran/aihomedesigner`)
 
-- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`), razmeštaj izvoza (`PlanExportLayout`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`).
+- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`; `PdfSizing.kt`: veličina slike iz strane PDF-a), prebacivanje sobe na drugi sprat (`FloorMove`), razmeštaj izvoza (`PlanExportLayout`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`, `DepthOrder.kt`: redosled crtanja kvadara).
 - `data/`: Room baza (`AppDatabase`, `*Entity`, `*Dao`, `*Mapper`, `*Repository`).
 - `export/`: crtanje plana u PNG i PDF (`PlanRenderer`, `PlanExporter`) i deljenje preko `FileProvider`-a (podešen u `AndroidManifest.xml` i `res/xml/file_paths.xml`).
 - `ui/`: ekrani i `ProjectsViewModel`. Navigacija je u `MainActivity.kt` (enum `Screen`, bez biblioteke za navigaciju).
@@ -62,7 +62,7 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Šta se proverava automatski (jedinični testovi)
 
-Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi, kalibracija razmere, razmeštaj izvoza, geometrija, 3D projekcija i pretvaranje podataka za bazu. Ekrani i gestovi se proveravaju ručno na telefonu.
+Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi i prebacivanje sobe na drugi sprat, kalibracija razmere, veličina slike iz PDF-a, razmeštaj izvoza, geometrija, 3D projekcija i redosled crtanja kvadara i pretvaranje podataka za bazu. Ekrani i gestovi se proveravaju ručno na telefonu.
 
 ## Redosled razvoja
 
@@ -73,6 +73,6 @@ Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi, kalibracija ra
 5. Geometrijska provera i povezane sobe, vrata i prozori (gotovo).
 6. Nameštaj i provera sudara (gotovo).
 7. Interaktivni 3D prikaz (gotovo, jednostavan).
-8. Uvoz plana i kalibracija razmere (gotovo za slike; PDF i automatsko prepoznavanje zidova nisu urađeni).
+8. Uvoz plana i kalibracija razmere (gotovo za slike i prvu stranu PDF-a; ostale strane PDF-a i automatsko prepoznavanje zidova nisu urađeni).
 9. AI vizuelizacija (opciono, bez ključeva u aplikaciji).
 10. Skeniranje i napredne funkcije.

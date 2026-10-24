@@ -9,7 +9,7 @@ Najvažniji zahtev je tačnost mera. Model nekretnine je izvor istine, a slike k
 - **Projekti** (stan ili kuća) sa trajnim čuvanjem na telefonu.
 - **Sobe**: pravougaone, sa unutrašnjom dužinom i širinom, visinom zida i debljinom zida (opciono). Mere su u metrima, a svaka ima oznaku izvora (npr. "upisao korisnik").
 - **2D plan**: sobe u razmeri, prevlačenje prstom i strelicama, zumiranje, strane sveta (sever je gore na planu), zidovi između susednih soba i dugme za priljubljivanje sobe uz susednu.
-- **Spratovi**: prizemlje, spratovi i podrumi. Svaki sprat ima svoj plan, a ime sobe mora da bude jedinstveno samo na istom spratu.
+- **Spratovi**: prizemlje, spratovi i podrumi. Svaki sprat ima svoj plan, a ime sobe mora da bude jedinstveno samo na istom spratu. Sobu je moguće prebaciti na drugi sprat (mere, vrata, prozori i nameštaj idu sa njom, a ona dobija novo mesto na planu tog sprata).
 - **Provera plana**: preklapanje soba i debljina zida između susednih soba.
 - **Vrata i prozori** na zidovima soba, sa položajem, merama, smerom otvaranja i stranom šarki. Luk otvaranja vrata se crta na planu.
 - **Nameštaj** sa pravim merama i okretanjem, prevlačenje na planu. Provera: izlazi iz sobe, previsok je, preklapanje, blokira vrata. Uz to preporuke o uskim prolazima (manje od 60 cm između predmeta ili do zida), koje nisu greške.
@@ -21,7 +21,7 @@ Svaka provera tvrdi samo ono što stvarno proverava, a aplikacija to ispisuje.
 
 ## Šta još ne radi
 
-Uvoz plana iz PDF-a (slika radi), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, stepenice, prebacivanje sobe na drugi sprat, sobe koje nisu pravougaone, više jezika osim srpskog.
+Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, stepenice, sobe koje nisu pravougaone, više jezika osim srpskog.
 
 ## Kako se gradi i pokreće (bez računara)
 
@@ -47,8 +47,8 @@ Sve mere u modelu su u metrima. Opis koordinatnog sistema je u `docs/koordinatni
 
 ## Poznata ograničenja
 
-- Pravougaone sobe. Sobu nije moguće prebaciti na drugi sprat, a stepenice ne postoje.
-- Ako upis u bazu ne uspe (na primer, pun telefon), aplikacija još ne prikazuje posebnu poruku.
+- Pravougaone sobe, a stepenice ne postoje.
+- Ako upis u bazu ne uspe (na primer, pun telefon), poruka se prikazuje za brisanja i pomeranja. Forme (novi i izmenjeni projekat, soba, vrata, nameštaj) još nemaju tu poruku.
 - Prikazi (plan, 3D) i gestovi se proveravaju ručno na telefonu. Automatski se testira logika (mere, provere, geometrija, projekcija).
-- 3D prikaz je jednostavan: bez tekstura i senki, a dalje stranice se ponekad pogrešno slože sa bližim.
+- 3D prikaz je jednostavan: bez tekstura i senki. Kvadri se crtaju od daljih ka bližim, što je pouzdano za sobe i nameštaj, ali nije potpuno skrivanje površina, pa su retki složeni slučajevi mogući.
 - Položaj soba na planu je raspored koji bira korisnik i nije izmeren.
