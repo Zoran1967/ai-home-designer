@@ -13,9 +13,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         RoomEntity::class,
         OpeningEntity::class,
         FurnitureEntity::class,
-        PlanImageEntity::class
+        PlanImageEntity::class,
+        StairsEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun furnitureDao(): FurnitureDao
 
     abstract fun planImageDao(): PlanImageDao
+
+    abstract fun stairsDao(): StairsDao
 
     companion object {
         /** Verzija 1 -> 2: dodaje tabelu soba. Postojeći projekti ostaju netaknuti. */
@@ -150,6 +153,31 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Verzija 7 -> 8: dodaje tabelu stepenica. Postojeći podaci ostaju netaknuti. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `stairs` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`projectId` TEXT NOT NULL, " +
+                        "`lowerLevel` INTEGER NOT NULL, " +
+                        "`xM` REAL NOT NULL, " +
+                        "`yM` REAL NOT NULL, " +
+                        "`lengthM` REAL NOT NULL, " +
+                        "`widthM` REAL NOT NULL, " +
+                        "`directionDeg` INTEGER NOT NULL, " +
+                        "`dimensionSource` TEXT NOT NULL, " +
+                        "`createdAtMillis` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`), " +
+                        "FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_stairs_projectId` ON `stairs` (`projectId`)"
+                )
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -162,7 +190,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .addMigrations(
                         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
-                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7
+                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
                     )
                     .build()
                     .also { instance = it }
