@@ -41,6 +41,8 @@ import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.PlanImage
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.Stairs
+import com.zoran.aihomedesigner.domain.StairsPlanning
 import com.zoran.aihomedesigner.ui.CalibrationScreen
 import com.zoran.aihomedesigner.ui.CrashScreen
 import com.zoran.aihomedesigner.ui.CreateProjectScreen
@@ -54,6 +56,8 @@ import com.zoran.aihomedesigner.ui.ProjectListScreen
 import com.zoran.aihomedesigner.ui.ProjectsViewModel
 import com.zoran.aihomedesigner.ui.RoomFormScreen
 import com.zoran.aihomedesigner.ui.RoomListScreen
+import com.zoran.aihomedesigner.ui.StairsFormScreen
+import com.zoran.aihomedesigner.ui.StairsListScreen
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
@@ -71,7 +75,10 @@ private enum class Screen {
     EDIT_OPENING,
     FURNITURE,
     CREATE_FURNITURE,
-    EDIT_FURNITURE
+    EDIT_FURNITURE,
+    STAIRS,
+    CREATE_STAIRS,
+    EDIT_STAIRS
 }
 
 class MainActivity : ComponentActivity() {
@@ -117,6 +124,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     var selectedRoomId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedOpeningId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedFurnitureId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedStairsId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedFloor by rememberSaveable { mutableIntStateOf(0) }
 
     val projects by viewModel.projects.collectAsState()
@@ -132,13 +140,17 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     val planImage by planImageFlow.collectAsState(initial = null)
 
     // Izbor slike plana iz galerije: slika se kopira u aplikaciju, pa ide na kalibraciju razmere.
-    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         val projectId = selectedProjectId
         if (uri != null && projectId != null) {
+            val isPdf = context.contentResolver.getType(uri) == "application/pdf"
             viewModel.importPlanImage(projectId, uri) { imported ->
                 if (imported != null) {
                     pendingImage = imported
                     screen = Screen.CALIBRATE
+                    if (isPdf) {
+                        Toast.makeText(context, R.string.plan_image_pdf_first_page, Toast.LENGTH_LONG).show()
+                    }
                 } else {
                     Toast.makeText(context, R.string.plan_image_import_failed, Toast.LENGTH_LONG).show()
                 }
@@ -184,6 +196,16 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     }
     val projectFurniture by projectFurnitureFlow.collectAsState(initial = null)
 
+    val projectStairsFlow = remember(selectedProjectId) {
+        selectedProjectId?.let { viewModel.observeStairs(it) } ?: flowOf<List<Stairs>?>(null)
+    }
+    val projectStairs by projectStairsFlow.collectAsState(initial = null)
+    val stairsToEdit = projectStairs?.firstOrNull { it.id == selectedStairsId }
+    // Donji spratovi koje stepenice mogu da povezuju: postojeći spratovi i prvi ispod njih
+    val stairsLevels = (floorLevels + listOfNotNull(nextFloorBelow))
+        .filter { Floors.isValidLevel(it) && Floors.isValidLevel(it + 1) }
+        .distinct().sorted()
+
     // Izvoz plana u sliku ili PDF i deljenje preko Android prozora za deljenje
     val scope = rememberCoroutineScope()
     fun exportPlan(format: PlanExporter.Format) {
@@ -218,9 +240,11 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
-            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.SCENE3D, Screen.OPENINGS, Screen.FURNITURE -> Screen.ROOMS
+            Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.SCENE3D, Screen.OPENINGS, Screen.FURNITURE,
+            Screen.STAIRS -> Screen.ROOMS
             Screen.CREATE_OPENING, Screen.EDIT_OPENING -> Screen.OPENINGS
             Screen.CREATE_FURNITURE, Screen.EDIT_FURNITURE -> Screen.FURNITURE
+            Screen.CREATE_STAIRS, Screen.EDIT_STAIRS -> Screen.STAIRS
             else -> {
                 selectedProjectId = null
                 Screen.PROJECTS
@@ -237,8 +261,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
 
     // Ako je izabrani projekat, soba ili otvor nestao (npr. obrisan), vrati se korak nazad.
     LaunchedEffect(
-        projects, rooms, roomOpenings, roomFurniture, pendingImage,
-        selectedProjectId, selectedRoomId, selectedOpeningId, selectedFurnitureId, screen
+        projects, rooms, roomOpenings, roomFurniture, projectStairs, pendingImage,
+        selectedProjectId, selectedRoomId, selectedOpeningId, selectedFurnitureId, selectedStairsId, screen
     ) {
         val needsProject = screen != Screen.PROJECTS && screen != Screen.CREATE_PROJECT
         val needsRoom = screen == Screen.EDIT_ROOM || screen == Screen.OPENINGS ||
@@ -253,6 +277,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
             screen = Screen.OPENINGS
         } else if (screen == Screen.EDIT_FURNITURE && roomFurniture != null && furnitureToEdit == null) {
             screen = Screen.FURNITURE
+        } else if (screen == Screen.EDIT_STAIRS && projectStairs != null && stairsToEdit == null) {
+            screen = Screen.STAIRS
         } else if (screen == Screen.CALIBRATE && pendingImage == null) {
             screen = Screen.ROOMS
         }
@@ -296,8 +322,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 },
                 onOpenPlan = { screen = Screen.PLAN },
                 onOpenScene3D = { screen = Screen.SCENE3D },
+                onOpenStairs = { screen = Screen.STAIRS },
                 planImage = planImage,
-                onImportPlanImage = { pickImage.launch("image/*") },
+                onImportPlanImage = { pickImage.launch(arrayOf("image/*", "application/pdf")) },
                 onRemovePlanImage = { selectedProjectId?.let { viewModel.deletePlanImage(it) } },
                 onExportPng = { exportPlan(PlanExporter.Format.PNG) },
                 onExportPdf = { exportPlan(PlanExporter.Format.PDF) },
@@ -442,6 +469,49 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     onSubmit = { input, onResult -> viewModel.updateFurniture(item.id, input, onResult) },
                     onDone = { screen = Screen.FURNITURE },
                     onCancel = { screen = Screen.FURNITURE }
+                )
+            }
+        }
+
+        Screen.STAIRS -> selectedProject?.let { project ->
+            StairsListScreen(
+                projectName = project.name,
+                stairs = projectStairs,
+                rooms = rooms.orEmpty(),
+                onBack = { screen = Screen.ROOMS },
+                onAdd = { screen = Screen.CREATE_STAIRS },
+                onEdit = {
+                    selectedStairsId = it.id
+                    screen = Screen.EDIT_STAIRS
+                },
+                onDelete = { viewModel.deleteStairs(it.id) }
+            )
+        }
+
+        Screen.CREATE_STAIRS -> selectedProject?.let { project ->
+            StairsFormScreen(
+                initialStairs = null,
+                levels = stairsLevels,
+                defaultLevel = selectedFloor,
+                onSubmit = { input, onResult ->
+                    val spot = StairsPlanning.defaultSpot(rooms.orEmpty(), input.lowerLevel)
+                    viewModel.createStairs(project.id, input, spot.xM, spot.yM, onResult)
+                },
+                onDone = { screen = Screen.STAIRS },
+                onCancel = { screen = Screen.STAIRS }
+            )
+        }
+
+        Screen.EDIT_STAIRS -> {
+            val item = stairsToEdit
+            if (item != null) {
+                StairsFormScreen(
+                    initialStairs = item,
+                    levels = stairsLevels,
+                    defaultLevel = item.lowerLevel,
+                    onSubmit = { input, onResult -> viewModel.updateStairs(item.id, input, onResult) },
+                    onDone = { screen = Screen.STAIRS },
+                    onCancel = { screen = Screen.STAIRS }
                 )
             }
         }

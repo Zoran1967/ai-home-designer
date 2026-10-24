@@ -17,6 +17,8 @@ import com.zoran.aihomedesigner.data.OpeningSaveResult
 import com.zoran.aihomedesigner.data.ProjectRepository
 import com.zoran.aihomedesigner.data.RoomRepository
 import com.zoran.aihomedesigner.data.RoomSaveResult
+import com.zoran.aihomedesigner.data.StairsRepository
+import com.zoran.aihomedesigner.data.StairsSaveResult
 import com.zoran.aihomedesigner.domain.FloorMoveResult
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.domain.FurnitureInput
@@ -27,6 +29,8 @@ import com.zoran.aihomedesigner.domain.Project
 import com.zoran.aihomedesigner.domain.PropertyType
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomInput
+import com.zoran.aihomedesigner.domain.Stairs
+import com.zoran.aihomedesigner.domain.StairsInput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +47,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     private val roomRepository = RoomRepository(database.roomDao())
     private val planImageRepository = PlanImageRepository(application, database.planImageDao())
     private val openingRepository = OpeningRepository(database.openingDao(), database.roomDao())
+    private val stairsRepository = StairsRepository(database.stairsDao())
     private val furnitureRepository = FurnitureRepository(
         database.furnitureDao(),
         database.roomDao(),
@@ -211,6 +216,33 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     fun deleteFurniture(id: String) {
         launchWrite {
             furnitureRepository.deleteFurniture(id)
+        }
+    }
+
+    fun observeStairs(projectId: String): Flow<List<Stairs>> =
+        stairsRepository.observeByProject(projectId)
+
+    fun createStairs(
+        projectId: String,
+        input: StairsInput,
+        xM: Double,
+        yM: Double,
+        onResult: (StairsSaveResult) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(stairsRepository.createStairs(projectId, input, xM, yM))
+        }
+    }
+
+    fun updateStairs(stairsId: String, input: StairsInput, onResult: (StairsSaveResult) -> Unit) {
+        viewModelScope.launch {
+            onResult(stairsRepository.updateStairs(stairsId, input))
+        }
+    }
+
+    fun deleteStairs(stairsId: String) {
+        launchWrite {
+            stairsRepository.deleteStairs(stairsId)
         }
     }
 

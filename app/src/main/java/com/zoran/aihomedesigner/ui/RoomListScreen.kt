@@ -46,6 +46,7 @@ fun RoomListScreen(
     onOpenRoom: (Room) -> Unit,
     onOpenPlan: () -> Unit,
     onOpenScene3D: () -> Unit,
+    onOpenStairs: () -> Unit,
     planImage: PlanImage?,
     onImportPlanImage: () -> Unit,
     onRemovePlanImage: () -> Unit,
@@ -94,6 +95,9 @@ fun RoomListScreen(
                     }
                     TextButton(onClick = onOpenScene3D) {
                         Text(stringResource(R.string.scene3d_button))
+                    }
+                    TextButton(onClick = onOpenStairs) {
+                        Text(stringResource(R.string.stairs_button))
                     }
                 }
             }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stairs_button">Stepenice</string>
+    <string name="stairs_title">Stepenice</string>
+    <string name="stairs_new">Nove stepenice</string>
+    <string name="stairs_edit">Izmeni</string>
+    <string name="stairs_empty">Nema stepenica. Dodajte ih dugmetom ispod.</string>
+    <string name="stairs_not_drawn_yet">Stepenice se još ne prikazuju na planu ni u 3D prikazu. Sada se samo upisuju i proveravaju.</string>
+    <string name="stairs_card_title">%1$s do %2$s</string>
+    <string name="stairs_card_size">Dužina kraka %1$s m, širina %2$s m. Penje se ka %3$s.</string>
+    <string name="stairs_card_steps">%1$d stepenika, visina stepenika oko %2$s cm, gazište oko %3$s cm.</string>
+    <string name="stairs_card_rise_note">Visina uspona je procena (%1$s m): najviši zid na donjem spratu i međuspratna ploča.</string>
+    <string name="stairs_advice_riser">Stepenici su viši od preporučenih %1$s cm.</string>
+    <string name="stairs_advice_tread">Gazište je kraće od preporučenih %1$s cm. Produžite krak stepenica.</string>
+    <string name="stairs_delete_title">Brisanje stepenica</string>
+    <string name="stairs_delete_message">Obrisati stepenice od „%1$s“ do „%2$s“?</string>
+    <string name="stairs_create_title">Nove stepenice</string>
+    <string name="stairs_edit_title">Izmena stepenica</string>
+    <string name="stairs_label_level">Koji sprat povezuju</string>
+    <string name="stairs_level_option">Od %1$s do %2$s</string>
+    <string name="stairs_error_level">Izabrani sprat nije dozvoljen.</string>
+    <string name="stairs_field_length">Dužina kraka (m)</string>
+    <string name="stairs_hint_length">Vodoravna dužina od dna do vrha stepenica, na primer 4,2</string>
+    <string name="stairs_field_width">Širina (m)</string>
+    <string name="stairs_hint_width">Širina stepenica, na primer 0,9</string>
+    <string name="stairs_label_direction">Pravac penjanja</string>
+    <string name="stairs_direction_note">Na planu je gore sever, a desno istok.</string>
+    <string name="stairs_direction_0">Penje se ka istoku (udesno)</string>
+    <string name="stairs_direction_90">Penje se ka jugu (nadole)</string>
+    <string name="stairs_direction_180">Penje se ka zapadu (ulevo)</string>
+    <string name="stairs_direction_270">Penje se ka severu (nagore)</string>
+    <string name="stairs_toward_0">istoku</string>
+    <string name="stairs_toward_90">jugu</string>
+    <string name="stairs_toward_180">zapadu</string>
+    <string name="stairs_toward_270">severu</string>
+</resources>
