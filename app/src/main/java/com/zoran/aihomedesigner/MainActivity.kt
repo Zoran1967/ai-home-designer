@@ -378,6 +378,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onMovePlanImage = { x, y -> selectedProjectId?.let { viewModel.movePlanImage(it, x, y) } },
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
+                onSetRoomLocked = { id, locked -> viewModel.setRoomLocked(id, locked) },
+                onGlueRoom = { id, onResult -> viewModel.glueRoom(id, onResult) },
+                onUnglueRoom = { id -> viewModel.unglueRoom(id) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) },
                 onMoveFurniture = { id, x, y, rotation -> viewModel.moveFurniture(id, x, y, rotation) }
             )

@@ -70,6 +70,9 @@ import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.PlanValidator
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomGeometry
+import com.zoran.aihomedesigner.domain.RoomGlueResult
+import com.zoran.aihomedesigner.domain.RoomGroups
+import com.zoran.aihomedesigner.domain.RoomMoveResult
 import com.zoran.aihomedesigner.domain.RoomPlacement
 import com.zoran.aihomedesigner.domain.SharedWall
 import com.zoran.aihomedesigner.domain.SharedWalls
@@ -104,7 +107,10 @@ fun PlanScreen(
     onMoveRoom: (String, Double, Double) -> Unit,
     onPlaceUnplaced: () -> Unit,
     onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> },
-    onMovePlanImage: (Double, Double) -> Unit = { _, _ -> }
+    onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
+    onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
+    onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
+    onUnglueRoom: (String) -> Unit = {}
 ) {
     var scale by remember { mutableFloatStateOf(60f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -120,14 +126,22 @@ fun PlanScreen(
     var dragImagePoint by remember { mutableStateOf<PlanPoint?>(null) }
     var stepM by rememberSaveable { mutableStateOf(0.05) }
     var snapFeedback by remember { mutableStateOf<SnapFeedback?>(null) }
+    var roomNote by remember { mutableStateOf<RoomNote?>(null) }
 
     val point = dragPoint
-    val displayRooms = rooms.orEmpty().filter { it.isPlaced }.map { room ->
-        if (room.id == dragRoomId && point != null) {
-            room.copy(xM = point.xM, yM = point.yM)
+    val placedRooms = rooms.orEmpty().filter { it.isPlaced }
+    // Dok se soba prevlači, sobe zalepljene za nju se pomeraju zajedno sa njom
+    val draggedId = dragRoomId
+    val dragPositions: Map<String, PlanPoint> =
+        if (draggedId != null && point != null) {
+            (RoomGroups.planMove(placedRooms, draggedId, point.xM, point.yM) as? RoomMoveResult.Moved)
+                ?.positions ?: emptyMap()
         } else {
-            room
+            emptyMap()
         }
+    val displayRooms = placedRooms.map { room ->
+        val moved = dragPositions[room.id]
+        if (moved != null) room.copy(xM = moved.xM, yM = moved.yM) else room
     }
     val overlapping = RoomGeometry.overlappingRoomIds(displayRooms)
     val walls = SharedWalls.find(displayRooms)
@@ -180,7 +194,10 @@ fun PlanScreen(
     val currentPlanImage by rememberUpdatedState(planImage)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
 
-    LaunchedEffect(selectedId) { snapFeedback = null }
+    LaunchedEffect(selectedId) {
+        snapFeedback = null
+        roomNote = null
+    }
 
     // Kad stigne novi položaj slike iz baze, privremeni položaj prevlačenja više nije potreban.
     LaunchedEffect(planImage) { dragImagePoint = null }
@@ -242,8 +259,15 @@ fun PlanScreen(
         }
     }
 
+    fun roomIsLocked(roomId: String): Boolean =
+        RoomGroups.members(displayRooms, roomId).any { it.positionLocked }
+
     fun nudge(dx: Double, dy: Double) {
         val room = selectedRoom ?: return
+        if (roomIsLocked(room.id)) {
+            roomNote = RoomNote.LOCKED
+            return
+        }
         onMoveRoom(
             room.id,
             RoomPlacement.roundToMm(room.xM!! + dx),
@@ -283,6 +307,10 @@ fun PlanScreen(
 
     fun snapSelected() {
         val room = selectedRoom ?: return
+        if (roomIsLocked(room.id)) {
+            roomNote = RoomNote.LOCKED
+            return
+        }
         when (val result = WallSnapping.snap(displayRooms, room.id)) {
             is WallSnapping.Result.Moved -> {
                 onMoveRoom(room.id, result.position.xM, result.position.yM)
@@ -357,7 +385,10 @@ fun PlanScreen(
                                 if (hitItem != null && hitItemRoom != null) hitItem.id else null
                             val startX = hit?.xM ?: 0.0
                             val startY = hit?.yM ?: 0.0
-                            var draggingId: String? = if (draggingFurnitureId == null) hit?.id else null
+                            val hitIsLocked = hit != null &&
+                                RoomGroups.members(currentRooms, hit.id).any { it.positionLocked }
+                            var draggingId: String? =
+                                if (draggingFurnitureId == null && !hitIsLocked) hit?.id else null
                             var moved = false
                             var multiTouch = false
                             var draggingImage = false
@@ -510,7 +541,9 @@ fun PlanScreen(
                         scale = scale,
                         offset = offset,
                         selected = room.id == selectedId,
-                        overlapping = room.id in overlapping
+                        overlapping = room.id in overlapping,
+                        locked = room.positionLocked,
+                        glued = RoomGroups.isGlued(displayRooms, room.id)
                     )
                 }
 
@@ -750,6 +783,65 @@ fun PlanScreen(
                                     )
                                 }
                             }
+                            if (selectedRoom.positionLocked) {
+                                Text(
+                                    text = stringResource(R.string.plan_room_locked_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    onSetRoomLocked(selectedRoom.id, !selectedRoom.positionLocked)
+                                    roomNote = null
+                                },
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Text(
+                                    stringResource(
+                                        if (selectedRoom.positionLocked) R.string.plan_room_unlock else R.string.plan_room_lock
+                                    )
+                                )
+                            }
+                            val glued = RoomGroups.isGlued(displayRooms, selectedRoom.id)
+                            OutlinedButton(
+                                onClick = {
+                                    if (glued) {
+                                        onUnglueRoom(selectedRoom.id)
+                                        roomNote = null
+                                    } else {
+                                        onGlueRoom(selectedRoom.id) { result ->
+                                            roomNote = if (result is RoomGlueResult.Glued) {
+                                                RoomNote.GLUED
+                                            } else {
+                                                RoomNote.NO_NEIGHBOURS
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Text(
+                                    stringResource(if (glued) R.string.plan_room_unglue else R.string.plan_room_glue)
+                                )
+                            }
+                            if (glued) {
+                                val partners = RoomGroups.members(displayRooms, selectedRoom.id)
+                                    .filter { it.id != selectedRoom.id }
+                                    .joinToString { it.name }
+                                Text(
+                                    text = stringResource(R.string.plan_room_glued_with, partners),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            roomNote?.let { note ->
+                                Text(
+                                    text = roomNoteText(note),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                             OutlinedButton(
                                 onClick = { snapSelected() },
                                 modifier = Modifier.padding(top = 4.dp)
@@ -805,7 +897,9 @@ private fun PlanRoom(
     scale: Float,
     offset: Offset,
     selected: Boolean,
-    overlapping: Boolean
+    overlapping: Boolean,
+    locked: Boolean = false,
+    glued: Boolean = false
 ) {
     val density = LocalDensity.current
     val left = (offset.x + room.xM!! * scale).roundToInt()
@@ -831,7 +925,7 @@ private fun PlanRoom(
     ) {
         Column {
             Text(
-                text = room.name,
+                text = (if (locked) "🔒 " else "") + (if (glued) "🔗 " else "") + room.name,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1078,6 +1172,16 @@ private fun CompassLabel(text: String, modifier: Modifier = Modifier) {
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
             .padding(horizontal = 6.dp, vertical = 2.dp)
     )
+}
+
+/** Poruka ispod dugmadi za zaključavanje i lepljenje sobe. */
+private enum class RoomNote { LOCKED, NO_NEIGHBOURS, GLUED }
+
+@Composable
+private fun roomNoteText(note: RoomNote): String = when (note) {
+    RoomNote.LOCKED -> stringResource(R.string.plan_note_locked)
+    RoomNote.NO_NEIGHBOURS -> stringResource(R.string.plan_note_no_neighbours)
+    RoomNote.GLUED -> stringResource(R.string.plan_note_glued)
 }
 
 /** Ishod poslednjeg pokušaja priljubljivanja, za poruku ispod dugmeta. */

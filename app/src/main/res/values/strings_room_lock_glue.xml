@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_room_lock">Zaključaj sobu</string>
+    <string name="plan_room_unlock">Otključaj sobu</string>
+    <string name="plan_room_glue">Zalepi uz susedne sobe</string>
+    <string name="plan_room_unglue">Odlepi sobu</string>
+    <string name="plan_room_glued_with">Zalepljena za: %1$s. Pomeraju se zajedno.</string>
+    <string name="plan_room_locked_hint">Soba je zaključana i ne pomera se prstom ni strelicama. Prevlačenje preko nje pomera prikaz.</string>
+    <string name="plan_note_locked">Soba (ili soba zalepljena za nju) je zaključana. Otključajte je da biste je pomerili.</string>
+    <string name="plan_note_no_neighbours">Nema susedne sobe uz koju bi se mogla zalepiti. Prvo priljubite sobe zid uz zid.</string>
+    <string name="plan_note_glued">Zalepljeno: sobe se sada pomeraju zajedno.</string>
+</resources>
