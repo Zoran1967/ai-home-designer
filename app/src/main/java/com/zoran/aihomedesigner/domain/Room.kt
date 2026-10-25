@@ -27,6 +27,12 @@ enum class DimensionSource {
  *
  * Sprat (floorLevel): 0 je prizemlje, 1 je prvi sprat, -1 je podrum. Sobe na različitim spratovima
  * ne proveravaju se međusobno (preklapanje, zidovi), a svaki sprat ima svoj plan.
+ *
+ * Zaključavanje (positionLocked): zaključana soba se ne pomera na planu (prstom, strelicama ni
+ * priljubljivanjem), da se ne pomeri slučajnim dodirom.
+ *
+ * Lepljenje (glueGroupId): sobe istog sprata sa istim glueGroupId (koji nije null) su zalepljene i
+ * pomeraju se zajedno, pa se pri pomeranju ne razilaze. Grupa sa jednom sobom nije zalepljena.
  */
 data class Room(
     val id: String,
@@ -40,7 +46,9 @@ data class Room(
     val createdAtMillis: Long,
     val xM: Double? = null,
     val yM: Double? = null,
-    val floorLevel: Int = 0
+    val floorLevel: Int = 0,
+    val positionLocked: Boolean = false,
+    val glueGroupId: String? = null
 ) {
     /** Površina poda, izračunata iz dužine i širine. */
     val areaM2: Double get() = lengthM * widthM

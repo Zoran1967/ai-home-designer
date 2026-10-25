@@ -35,5 +35,7 @@ data class RoomEntity(
     val createdAtMillis: Long,
     val xM: Double? = null,
     val yM: Double? = null,
-    @ColumnInfo(defaultValue = "0") val floorLevel: Int = 0
+    @ColumnInfo(defaultValue = "0") val floorLevel: Int = 0,
+    @ColumnInfo(defaultValue = "0") val positionLocked: Boolean = false,
+    val glueGroupId: String? = null
 )

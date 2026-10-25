@@ -15,7 +15,9 @@ fun Room.toEntity(): RoomEntity = RoomEntity(
     createdAtMillis = createdAtMillis,
     xM = xM,
     yM = yM,
-    floorLevel = floorLevel
+    floorLevel = floorLevel,
+    positionLocked = positionLocked,
+    glueGroupId = glueGroupId
 )
 
 /** Vraća null ako je izvor mere u bazi nepoznat, da ne prikažemo pogrešne podatke. */
@@ -34,6 +36,8 @@ fun RoomEntity.toDomainOrNull(): Room? {
         createdAtMillis = createdAtMillis,
         xM = xM,
         yM = yM,
-        floorLevel = floorLevel
+        floorLevel = floorLevel,
+        positionLocked = positionLocked,
+        glueGroupId = glueGroupId
     )
 }
