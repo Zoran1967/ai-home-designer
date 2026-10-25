@@ -5,6 +5,9 @@ import com.zoran.aihomedesigner.domain.FloorMove
 import com.zoran.aihomedesigner.domain.FloorMoveResult
 import com.zoran.aihomedesigner.domain.Floors
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.RoomGlueResult
+import com.zoran.aihomedesigner.domain.RoomGroups
+import com.zoran.aihomedesigner.domain.RoomMoveResult
 import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.RoomInputErrors
 import com.zoran.aihomedesigner.domain.RoomPlacement
@@ -115,6 +118,55 @@ class RoomRepository(private val dao: RoomDao) {
     }
 
     /**
+     * Pomera sobu i sobe zalepljene za nju za isti pomak, u jednoj transakciji. Zaključana soba (ili soba
+     * zalepljena za zaključanu) se ne pomera. Neispravne koordinate se odbacuju.
+     */
+    suspend fun moveRoomGroup(roomId: String, xM: Double, yM: Double): RoomMoveResult {
+        if (!RoomPlacement.isValidCoordinate(xM) || !RoomPlacement.isValidCoordinate(yM)) {
+            return RoomMoveResult.NotPlaced
+        }
+        val room = dao.getById(roomId)?.toDomainOrNull() ?: return RoomMoveResult.NotPlaced
+        val rooms = dao.getByProject(room.projectId).mapNotNull { it.toDomainOrNull() }
+        val result = RoomGroups.planMove(rooms, roomId, xM, yM)
+        if (result is RoomMoveResult.Moved) {
+            if (result.positions.values.any { !RoomPlacement.isValidCoordinate(it.xM) || !RoomPlacement.isValidCoordinate(it.yM) }) {
+                return RoomMoveResult.NotPlaced
+            }
+            val updated = result.positions.mapNotNull { (id, point) ->
+                dao.getById(id)?.copy(xM = point.xM, yM = point.yM)
+            }
+            dao.updateAll(updated)
+        }
+        return result
+    }
+
+    /** Zaključava ili otključava položaj sobe. */
+    suspend fun setLocked(roomId: String, locked: Boolean) = dao.updateLocked(roomId, locked)
+
+    /** Lepi sobu uz susedne sobe istog sprata (sobe sa kojima deli zid). */
+    suspend fun glueWithNeighbours(roomId: String): RoomGlueResult {
+        val room = dao.getById(roomId)?.toDomainOrNull() ?: return RoomGlueResult.NoNeighbours
+        val rooms = dao.getByProject(room.projectId).mapNotNull { it.toDomainOrNull() }
+        val result = RoomGroups.glueWithNeighbours(rooms, roomId)
+        if (result is RoomGlueResult.Glued) {
+            val updated = result.assignments.mapNotNull { (id, groupId) ->
+                dao.getById(id)?.copy(glueGroupId = groupId)
+            }
+            dao.updateAll(updated)
+        }
+        return result
+    }
+
+    /** Odlepljuje sobu od zalepljenih soba. */
+    suspend fun unglue(roomId: String) {
+        val room = dao.getById(roomId)?.toDomainOrNull() ?: return
+        val rooms = dao.getByProject(room.projectId).mapNotNull { it.toDomainOrNull() }
+        val changes = RoomGroups.unglue(rooms, roomId)
+        val updated = changes.mapNotNull { (id, groupId) -> dao.getById(id)?.copy(glueGroupId = groupId) }
+        if (updated.isNotEmpty()) dao.updateAll(updated)
+    }
+
+    /**
      * Prebacuje sobu na drugi sprat (provere i novi položaj računa [FloorMove]).
      * Menja se samo sprat i položaj, a mere i izvor mera ostaju netaknuti.
      * Vrata, prozori i nameštaj su vezani za sobu, pa idu sa njom.
@@ -123,7 +175,8 @@ class RoomRepository(private val dao: RoomDao) {
         val room = dao.getById(roomId)?.toDomainOrNull() ?: return FloorMoveResult.NotFound
         val projectRooms = dao.getByProject(room.projectId).mapNotNull { it.toDomainOrNull() }
         val result = FloorMove.move(room, targetLevel, projectRooms)
-        if (result is FloorMoveResult.Moved) dao.update(result.room.toEntity())
+        // Soba koja menja sprat se odlepljuje od soba sa starog sprata
+        if (result is FloorMoveResult.Moved) dao.update(result.room.copy(glueGroupId = null).toEntity())
         return result
     }
 

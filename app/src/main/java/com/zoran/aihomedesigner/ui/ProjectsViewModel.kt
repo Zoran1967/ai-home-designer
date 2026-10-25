@@ -28,6 +28,7 @@ import com.zoran.aihomedesigner.domain.OpeningInput
 import com.zoran.aihomedesigner.domain.Project
 import com.zoran.aihomedesigner.domain.PropertyType
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.RoomGlueResult
 import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.Stairs
 import com.zoran.aihomedesigner.domain.StairsInput
@@ -126,8 +127,27 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun moveRoom(roomId: String, xM: Double, yM: Double) {
+        // Zalepljene sobe se pomeraju zajedno, a zaključana soba se ne pomera
         launchWrite {
-            roomRepository.moveRoom(roomId, xM, yM)
+            roomRepository.moveRoomGroup(roomId, xM, yM)
+        }
+    }
+
+    fun setRoomLocked(roomId: String, locked: Boolean) {
+        launchWrite {
+            roomRepository.setLocked(roomId, locked)
+        }
+    }
+
+    fun glueRoom(roomId: String, onResult: (RoomGlueResult) -> Unit) {
+        launchWrite {
+            onResult(roomRepository.glueWithNeighbours(roomId))
+        }
+    }
+
+    fun unglueRoom(roomId: String) {
+        launchWrite {
+            roomRepository.unglue(roomId)
         }
     }
 

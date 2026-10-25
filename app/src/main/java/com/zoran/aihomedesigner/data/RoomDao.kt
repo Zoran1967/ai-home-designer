@@ -32,6 +32,14 @@ interface RoomDao {
     @Update
     suspend fun update(room: RoomEntity)
 
+    /** Menja više soba odjednom, u jednoj transakciji (npr. grupa zalepljenih soba koja se pomera zajedno). */
+    @Update
+    suspend fun updateAll(rooms: List<RoomEntity>)
+
+    /** Zaključava ili otključava položaj sobe. */
+    @Query("UPDATE rooms SET positionLocked = :locked WHERE id = :id")
+    suspend fun updateLocked(id: String, locked: Boolean)
+
     /** Menja samo položaj na planu, ostala polja sobe ostaju netaknuta. */
     @Query("UPDATE rooms SET xM = :xM, yM = :yM WHERE id = :id")
     suspend fun updatePosition(id: String, xM: Double, yM: Double)
