@@ -43,7 +43,7 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Struktura koda (`app/src/main/java/com/zoran/aihomedesigner`)
 
-- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`; `PdfSizing.kt`: veličina slike iz strane PDF-a), prebacivanje sobe na drugi sprat (`FloorMove`), razmeštaj izvoza (`PlanExportLayout`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`, `DepthOrder.kt`: redosled crtanja kvadara).
+- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), zaključavanje i lepljenje soba (`RoomGroups`), stepenice (`Stairs`, `StairsValidator`, `StairsGeometry`, `StairsPlanning`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`; `PdfSizing.kt`: veličina slike iz strane PDF-a), prebacivanje sobe na drugi sprat (`FloorMove`), razmeštaj izvoza (`PlanExportLayout`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`, `DepthOrder.kt`: redosled crtanja kvadara).
 - `data/`: Room baza (`AppDatabase`, `*Entity`, `*Dao`, `*Mapper`, `*Repository`).
 - `export/`: crtanje plana u PNG i PDF (`PlanRenderer`, `PlanExporter`) i deljenje preko `FileProvider`-a (podešen u `AndroidManifest.xml` i `res/xml/file_paths.xml`).
 - `ui/`: ekrani i `ProjectsViewModel`. Navigacija je u `MainActivity.kt` (enum `Screen`, bez biblioteke za navigaciju).
@@ -51,7 +51,7 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Baza
 
-- Trenutna verzija je 7. Migracije 1 do 7 su u `AppDatabase.kt`. Tabele: projekti, sobe (sa spratom i položajem), otvori, nameštaj, slike plana.
+- Trenutna verzija je 9. Migracije 1 do 9 su u `AppDatabase.kt`. Tabele: projekti, sobe (sa spratom, položajem, zaključavanjem i lepljenjem), otvori, nameštaj, slike plana, stepenice.
 - Svaka izmena šeme podiže verziju i dodaje migraciju koja ne briše podatke. SQL u migraciji mora tačno da odgovara onome što Room očekuje za entitet.
 - Nikada `fallbackToDestructiveMigration`. Migraciju proverava samo telefon (ne automatski test), pa se menja šema uvek u posebnom malom zipu.
 - Ako Room javi "cannot verify the data integrity", baza ne odgovara kodu. Prvo utvrdi uzrok, a brisanje podataka je krajnja mera.
@@ -62,7 +62,7 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Šta se proverava automatski (jedinični testovi)
 
-Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi i prebacivanje sobe na drugi sprat, kalibracija razmere, veličina slike iz PDF-a, razmeštaj izvoza, geometrija, 3D projekcija i redosled crtanja kvadara i pretvaranje podataka za bazu. Ekrani i gestovi se proveravaju ručno na telefonu.
+Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi i prebacivanje sobe na drugi sprat, stepenice (provera unosa, udobnost, procena uspona), zaključavanje i lepljenje soba, kalibracija razmere, veličina slike iz PDF-a, razmeštaj izvoza, geometrija, 3D projekcija i redosled crtanja kvadara i pretvaranje podataka za bazu. Ekrani i gestovi se proveravaju ručno na telefonu.
 
 ## Redosled razvoja
 
@@ -74,5 +74,6 @@ Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi i prebacivanje 
 6. Nameštaj i provera sudara (gotovo).
 7. Interaktivni 3D prikaz (gotovo, jednostavan).
 8. Uvoz plana i kalibracija razmere (gotovo za slike i prvu stranu PDF-a; ostale strane PDF-a i automatsko prepoznavanje zidova nisu urađeni).
-9. AI vizuelizacija (opciono, bez ključeva u aplikaciji).
-10. Skeniranje i napredne funkcije.
+9. Stepenice i raspored soba: unos, provera i savet o udobnosti su gotovi; zaključavanje i lepljenje soba na planu su gotovi. Crtanje stepenica na planu, u 3D prikazu i u izvozu nije urađeno.
+10. AI vizuelizacija (opciono, bez ključeva u aplikaciji).
+11. Skeniranje i napredne funkcije.

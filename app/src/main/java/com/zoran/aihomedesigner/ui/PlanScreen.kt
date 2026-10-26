@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
@@ -76,6 +77,11 @@ import com.zoran.aihomedesigner.domain.RoomMoveResult
 import com.zoran.aihomedesigner.domain.RoomPlacement
 import com.zoran.aihomedesigner.domain.SharedWall
 import com.zoran.aihomedesigner.domain.SharedWalls
+import com.zoran.aihomedesigner.domain.Stairs
+import com.zoran.aihomedesigner.domain.StairsGeometry
+import com.zoran.aihomedesigner.domain.StairsOnPlan
+import com.zoran.aihomedesigner.domain.StairsPlanning
+import com.zoran.aihomedesigner.domain.StairsRole
 import com.zoran.aihomedesigner.domain.WallOrientation
 import com.zoran.aihomedesigner.domain.WallSide
 import com.zoran.aihomedesigner.domain.WallSnapping
@@ -83,6 +89,7 @@ import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 private const val MIN_SCALE = 8f   // najmanje piksela po metru
 private const val MAX_SCALE = 600f // najviše piksela po metru
@@ -101,6 +108,9 @@ fun PlanScreen(
     rooms: List<Room>?,
     openings: List<Opening>,
     furniture: List<Furniture> = emptyList(),
+    stairs: List<Stairs> = emptyList(),
+    floorLevel: Int = 0,
+    allRooms: List<Room> = emptyList(),
     planImage: PlanImage? = null,
     planBitmap: ImageBitmap? = null,
     onBack: () -> Unit,
@@ -553,6 +563,18 @@ fun PlanScreen(
                         scale = scale,
                         offset = offset,
                         hasIssue = wall in wallsWithIssues
+                    )
+                }
+
+                // Stepenice sa ovog sprata (pune linije) i one koje stižu na ovaj sprat (isprekidane)
+                stairs.forEach { item ->
+                    val role = StairsOnPlan.role(item, floorLevel) ?: return@forEach
+                    PlanStairs(
+                        stairs = item,
+                        role = role,
+                        stepCount = StairsGeometry.stepCount(StairsPlanning.riseM(allRooms, item.lowerLevel)),
+                        scale = scale,
+                        offset = offset
                     )
                 }
 
@@ -1016,6 +1038,99 @@ private fun issueText(issue: PlanIssue, rooms: List<Room>): String {
  * Komad nameštaja kao pravougaonik u razmeri, unutar sobe. Položaj se meri od gornjeg levog ugla
  * unutrašnjosti sobe, pa se nameštaj pomera zajedno sa sobom. Dužina i širina se menjaju za 90 i 270 stepeni.
  */
+/**
+ * Stepenice na planu: pravougaonik, poprečne crte gazišta i strelica ka gore.
+ * Na donjem spratu su pune linije sa strelicom, a na gornjem isprekidane (stepenice stižu ovamo).
+ * Broj crta je procena iz visine soba, a ne izmerena vrednost.
+ */
+@Composable
+private fun PlanStairs(
+    stairs: Stairs,
+    role: StairsRole,
+    stepCount: Int,
+    scale: Float,
+    offset: Offset
+) {
+    val density = LocalDensity.current
+    val left = (offset.x + stairs.xM * scale).roundToInt()
+    val top = (offset.y + stairs.yM * scale).roundToInt()
+    val widthPx = (stairs.footprintLengthM * scale).toFloat()
+    val heightPx = (stairs.footprintWidthM * scale).toFloat()
+
+    val colors = MaterialTheme.colorScheme
+    val lineColor = colors.secondary
+    val fillColor = colors.secondaryContainer.copy(alpha = if (role == StairsRole.DEPARTS) 0.7f else 0.35f)
+    val lines = remember(stairs, stepCount) { StairsOnPlan.stepLines(stairs, stepCount) }
+    val arrow = remember(stairs) { StairsOnPlan.climbArrow(stairs) }
+    val label = if (role == StairsRole.DEPARTS) {
+        stringResource(R.string.plan_stairs_up, floorLabel(stairs.upperLevel))
+    } else {
+        stringResource(R.string.plan_stairs_from, floorLabel(stairs.lowerLevel))
+    }
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(left, top) }
+            .requiredSize(
+                with(density) { widthPx.toDp() },
+                with(density) { heightPx.toDp() }
+            )
+            .clipToBounds()
+            .drawBehind {
+                fun px(p: PlanPoint) = Offset(
+                    ((p.xM - stairs.xM) * scale).toFloat(),
+                    ((p.yM - stairs.yM) * scale).toFloat()
+                )
+
+                drawRect(fillColor)
+                val dash = if (role == StairsRole.ARRIVES) {
+                    PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
+                } else {
+                    null
+                }
+                drawRect(lineColor, style = Stroke(width = 2.dp.toPx(), pathEffect = dash))
+                lines.forEach { line ->
+                    drawLine(lineColor, px(line.from), px(line.to), strokeWidth = 1.dp.toPx(), pathEffect = dash)
+                }
+
+                if (role == StairsRole.DEPARTS) {
+                    val tail = px(arrow.from)
+                    val head = px(arrow.to)
+                    val dx = head.x - tail.x
+                    val dy = head.y - tail.y
+                    val length = sqrt(dx * dx + dy * dy)
+                    if (length > 0f) {
+                        val ux = dx / length
+                        val uy = dy / length
+                        val headLength = min(10.dp.toPx(), length / 3f)
+                        val bx = head.x - ux * headLength
+                        val by = head.y - uy * headLength
+                        val stroke = 2.dp.toPx()
+                        drawLine(lineColor, tail, head, strokeWidth = stroke)
+                        drawLine(
+                            lineColor, head,
+                            Offset(bx - uy * headLength * 0.5f, by + ux * headLength * 0.5f),
+                            strokeWidth = stroke
+                        )
+                        drawLine(
+                            lineColor, head,
+                            Offset(bx + uy * headLength * 0.5f, by - ux * headLength * 0.5f),
+                            strokeWidth = stroke
+                        )
+                    }
+                }
+            }
+            .padding(2.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 @Composable
 private fun PlanFurniture(
     furniture: Furniture,
