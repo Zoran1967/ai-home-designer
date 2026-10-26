@@ -3,7 +3,7 @@ package com.zoran.aihomedesigner.domain
 /** Tačka u 3D prostoru, u metrima: x udesno (kao na planu), y nadole na planu (ka jugu), z naviše. */
 data class Vec3(val x: Double, val y: Double, val z: Double)
 
-enum class SceneKind { FLOOR, WALL, DOOR, WINDOW, FURNITURE }
+enum class SceneKind { FLOOR, WALL, DOOR, WINDOW, FURNITURE, STAIRS }
 
 /**
  * Pravougaoni kvadar poravnat sa osama, u metrima. Sve što se crta u 3D prikazu pravi se iz istih
@@ -60,9 +60,15 @@ object SceneBuilder {
 
     /**
      * Pravi kvadre za sve sobe sa položajem na planu, njihova vrata i prozore i nameštaj.
-     * Sobe sa različitih spratova stoje jedna iznad druge.
+     * Sobe sa različitih spratova stoje jedna iznad druge. Stepenice se crtaju samo ako donji sprat
+     * stepenica ima sobe sa položajem (inače se ne zna na kojoj visini počinju).
      */
-    fun build(rooms: List<Room>, openings: List<Opening>, furniture: List<Furniture>): List<SceneBox> {
+    fun build(
+        rooms: List<Room>,
+        openings: List<Opening>,
+        furniture: List<Furniture>,
+        stairs: List<Stairs> = emptyList()
+    ): List<SceneBox> {
         val placed = rooms.filter { it.isPlaced }
         val roomsById = placed.associateBy { it.id }
         val offsets = floorOffsets(placed)
@@ -102,7 +108,41 @@ object SceneBuilder {
             val room = roomsById[opening.roomId] ?: continue
             result += openingBox(room, opening, offsets.getValue(room.floorLevel))
         }
+
+        for (item in stairs) {
+            val floorZ = offsets[item.lowerLevel] ?: continue
+            result += stairsBoxes(item, floorZ, StairsPlanning.riseM(placed, item.lowerLevel))
+        }
         return result
+    }
+
+    /**
+     * Stepenice kao niz kvadara (gazišta) koji rastu u pravcu penjanja. Broj stepenika je procena iz visine
+     * uspona [riseM] (vidi [StairsGeometry.stepCount]). Poslednji stepenik je sam pod sprata iznad, pa je
+     * gazišta za jedno manje od stepenika. Ploča sprata iznad nema otvor za stepenice.
+     */
+    fun stairsBoxes(stairs: Stairs, floorZ: Double, riseM: Double): List<SceneBox> {
+        require(stairs.directionDeg in listOf(0, 90, 180, 270)) { "Pravac penjanja mora biti 0, 90, 180 ili 270" }
+        val steps = StairsGeometry.stepCount(riseM)
+        val riser = riseM / steps
+        val treads = steps - 1
+        val f = StairsGeometry.footprint(stairs)
+        val alongX = stairs.directionDeg % 180 == 0
+        val towardPositive = stairs.directionDeg == 0 || stairs.directionDeg == 90
+        val start = if (alongX) f.x0 else f.y0
+        val runLength = if (alongX) f.x1 - f.x0 else f.y1 - f.y0
+        val treadLength = runLength / treads
+
+        return (0 until treads).map { j ->
+            val a = if (towardPositive) start + j * treadLength else start + runLength - (j + 1) * treadLength
+            val b = a + treadLength
+            val top = floorZ + riser * (j + 1)
+            if (alongX) {
+                SceneBox(Vec3(a, f.y0, floorZ), Vec3(b, f.y1, top), SceneKind.STAIRS, null, stairs.id)
+            } else {
+                SceneBox(Vec3(f.x0, a, floorZ), Vec3(f.x1, b, top), SceneKind.STAIRS, null, stairs.id)
+            }
+        }
     }
 
     /** Vrata ili prozor kao ploča koja prolazi kroz zid i malo viri sa obe strane. */

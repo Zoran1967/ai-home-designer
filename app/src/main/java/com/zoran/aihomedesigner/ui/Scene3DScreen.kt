@@ -40,6 +40,7 @@ import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.SceneBox
 import com.zoran.aihomedesigner.domain.SceneBuilder
 import com.zoran.aihomedesigner.domain.SceneKind
+import com.zoran.aihomedesigner.domain.Stairs
 import com.zoran.aihomedesigner.domain.Vec3
 import kotlin.math.max
 
@@ -55,10 +56,11 @@ fun Scene3DScreen(
     rooms: List<Room>?,
     openings: List<Opening>,
     furniture: List<Furniture>,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    stairs: List<Stairs> = emptyList()
 ) {
     val placedRooms = rooms.orEmpty().filter { it.isPlaced }
-    val boxes = SceneBuilder.build(placedRooms, openings, furniture)
+    val boxes = SceneBuilder.build(placedRooms, openings, furniture, stairs)
 
     // Središte i veličina scene, da kamera počne tamo gde su sobe
     val minX = boxes.minOfOrNull { it.min.x } ?: 0.0
@@ -77,6 +79,7 @@ fun Scene3DScreen(
     var distance by remember(sceneKey) { mutableFloatStateOf(initialDistance) }
 
     val usesDefaultWall = placedRooms.any { it.wallThicknessM == null }
+    val hasStairs = boxes.any { it.kind == SceneKind.STAIRS }
 
     Scaffold { padding ->
         Column(
@@ -140,6 +143,13 @@ fun Scene3DScreen(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
+                if (hasStairs) {
+                    Text(
+                        text = stringResource(R.string.scene3d_note_stairs),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
                 Text(
                     text = stringResource(R.string.scene3d_disclaimer),
                     style = MaterialTheme.typography.bodySmall,
@@ -156,6 +166,7 @@ private fun baseColor(kind: SceneKind): Color = when (kind) {
     SceneKind.DOOR -> Color(0xFF8D6E63)
     SceneKind.WINDOW -> Color(0xFF64B5F6)
     SceneKind.FURNITURE -> Color(0xFFFFB74D)
+    SceneKind.STAIRS -> Color(0xFFD7B98E)
 }
 
 private fun shade(color: Color, factor: Float) =

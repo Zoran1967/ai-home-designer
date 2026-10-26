@@ -394,7 +394,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 rooms = rooms,
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
-                onBack = { screen = Screen.ROOMS }
+                onBack = { screen = Screen.ROOMS },
+                stairs = projectStairs.orEmpty()
             )
         }
 
