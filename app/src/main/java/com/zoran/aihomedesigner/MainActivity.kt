@@ -37,6 +37,7 @@ import com.zoran.aihomedesigner.data.ImportedImage
 import com.zoran.aihomedesigner.domain.Floors
 import com.zoran.aihomedesigner.domain.Furniture
 import com.zoran.aihomedesigner.export.PlanExporter
+import com.zoran.aihomedesigner.export.PlanStairsLayer
 import com.zoran.aihomedesigner.domain.FurnitureLayoutValidator
 import com.zoran.aihomedesigner.domain.Opening
 import com.zoran.aihomedesigner.domain.PlanImage
@@ -222,7 +223,14 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 rooms = floorRooms.orEmpty(),
                 openings = projectOpenings.orEmpty(),
                 furniture = projectFurniture.orEmpty(),
-                format = format
+                format = format,
+                stairsLayer = PlanStairsLayer(
+                    stairs = projectStairs.orEmpty(),
+                    floorLevel = selectedFloor,
+                    allRooms = rooms.orEmpty(),
+                    upLabel = context.getString(R.string.export_stairs_up),
+                    fromLabel = context.getString(R.string.export_stairs_from)
+                )
             )
             if (uri == null) {
                 Toast.makeText(context, R.string.export_failed, Toast.LENGTH_LONG).show()

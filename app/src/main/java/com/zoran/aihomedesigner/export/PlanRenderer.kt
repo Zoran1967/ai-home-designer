@@ -2,6 +2,7 @@ package com.zoran.aihomedesigner.export
 
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.RectF
 import com.zoran.aihomedesigner.domain.DoorSwingGeometry
@@ -13,9 +14,27 @@ import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.SceneBox
 import com.zoran.aihomedesigner.domain.SceneBuilder
 import com.zoran.aihomedesigner.domain.SceneKind
+import com.zoran.aihomedesigner.domain.Stairs
+import com.zoran.aihomedesigner.domain.StairsGeometry
+import com.zoran.aihomedesigner.domain.StairsOnPlan
+import com.zoran.aihomedesigner.domain.StairsPlanning
+import com.zoran.aihomedesigner.domain.StairsRole
 import com.zoran.aihomedesigner.ui.formatMeters
 import kotlin.math.atan2
 import kotlin.math.min
+
+/**
+ * Stepenice koje se crtaju na izvezenom planu sprata [floorLevel]. [allRooms] su sobe celog projekta
+ * (iz njih se procenjuje visina uspona), a [upLabel] i [fromLabel] su natpisi za stepenice koje kreću
+ * sa ovog sprata, odnosno stižu na njega.
+ */
+data class PlanStairsLayer(
+    val stairs: List<Stairs>,
+    val floorLevel: Int,
+    val allRooms: List<Room>,
+    val upLabel: String,
+    val fromLabel: String
+)
 
 /**
  * Crta plan odozgo na proizvoljnu površinu (slika ili PDF stranica), iz istih podataka kao ekran plana:
@@ -32,7 +51,8 @@ object PlanRenderer {
         footerLines: List<String>,
         rooms: List<Room>,
         openings: List<Opening>,
-        furniture: List<Furniture>
+        furniture: List<Furniture>,
+        stairsLayer: PlanStairsLayer? = null
     ) {
         canvas.drawColor(Color.WHITE)
         val w = width.toDouble()
@@ -64,7 +84,7 @@ object PlanRenderer {
             bottomReserved = (height - barY + unit * 1.5f - margin).toDouble()
         )
 
-        drawPlan(canvas, frame, unit, rooms, openings, furniture)
+        drawPlan(canvas, frame, unit, rooms, openings, furniture, stairsLayer)
         drawScaleBar(canvas, frame, margin, barY, width * 0.25, unit)
 
         text.textSize = unit * 0.9f
@@ -80,7 +100,8 @@ object PlanRenderer {
         unit: Float,
         rooms: List<Room>,
         openings: List<Opening>,
-        furniture: List<Furniture>
+        furniture: List<Furniture>,
+        stairsLayer: PlanStairsLayer?
     ) {
         val boxes = SceneBuilder.build(rooms, openings, furniture)
         val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -103,6 +124,7 @@ object PlanRenderer {
             fill.color = Color.rgb(0x55, 0x55, 0x55)
             canvas.drawRect(rect(box), fill)
         }
+        if (stairsLayer != null) drawStairs(canvas, frame, unit, stairsLayer)
         val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(0x4E, 0x34, 0x2E)
             textAlign = Paint.Align.CENTER
@@ -130,6 +152,75 @@ object PlanRenderer {
 
         drawDoorSwings(canvas, frame, unit, rooms, openings)
         drawRoomLabels(canvas, frame, unit, rooms)
+    }
+
+    /**
+     * Stepenice kao na ekranu plana: sa ovog sprata pune linije sa strelicom ka gore, a one koje stižu
+     * na ovaj sprat isprekidane. Broj crta je procena iz visine soba.
+     */
+    private fun drawStairs(canvas: Canvas, frame: ExportFrame, unit: Float, layer: PlanStairsLayer) {
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = unit * 0.1f
+            color = Color.rgb(0x45, 0x5A, 0x64)
+        }
+        val dash = DashPathEffect(floatArrayOf(unit * 0.8f, unit * 0.5f), 0f)
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(0x26, 0x32, 0x38)
+            textAlign = Paint.Align.CENTER
+            textSize = unit * 0.75f
+        }
+
+        for (item in layer.stairs) {
+            val role = StairsOnPlan.role(item, layer.floorLevel) ?: continue
+            val departs = role == StairsRole.DEPARTS
+            val f = StairsGeometry.footprint(item)
+            val r = RectF(
+                frame.x(f.x0).toFloat(), frame.y(f.y0).toFloat(),
+                frame.x(f.x1).toFloat(), frame.y(f.y1).toFloat()
+            )
+            fill.color = Color.argb(if (departs) 0xB0 else 0x60, 0xB0, 0xBE, 0xC5)
+            canvas.drawRect(r, fill)
+
+            line.pathEffect = if (departs) null else dash
+            canvas.drawRect(r, line)
+            val stepCount = StairsGeometry.stepCount(StairsPlanning.riseM(layer.allRooms, item.lowerLevel))
+            for (step in StairsOnPlan.stepLines(item, stepCount)) {
+                canvas.drawLine(
+                    frame.x(step.from.xM).toFloat(), frame.y(step.from.yM).toFloat(),
+                    frame.x(step.to.xM).toFloat(), frame.y(step.to.yM).toFloat(),
+                    line
+                )
+            }
+
+            if (departs) {
+                line.pathEffect = null
+                val arrow = StairsOnPlan.climbArrow(item)
+                val tx = frame.x(arrow.from.xM).toFloat()
+                val ty = frame.y(arrow.from.yM).toFloat()
+                val hx = frame.x(arrow.to.xM).toFloat()
+                val hy = frame.y(arrow.to.yM).toFloat()
+                val dx = hx - tx
+                val dy = hy - ty
+                val length = kotlin.math.sqrt(dx * dx + dy * dy)
+                if (length > 0f) {
+                    val ux = dx / length
+                    val uy = dy / length
+                    val headLength = min(unit, length / 3f)
+                    val bx = hx - ux * headLength
+                    val by = hy - uy * headLength
+                    canvas.drawLine(tx, ty, hx, hy, line)
+                    canvas.drawLine(hx, hy, bx - uy * headLength * 0.5f, by + ux * headLength * 0.5f, line)
+                    canvas.drawLine(hx, hy, bx + uy * headLength * 0.5f, by - ux * headLength * 0.5f, line)
+                }
+            }
+
+            val name = if (departs) layer.upLabel else layer.fromLabel
+            if (name.isNotBlank() && text.measureText(name) <= r.width() - unit * 0.3f && r.height() > unit) {
+                canvas.drawText(name, r.centerX(), r.top + unit * 0.9f, text)
+            }
+        }
     }
 
     private fun drawDoorSwings(

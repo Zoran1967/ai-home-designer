@@ -11,7 +11,7 @@ Najvažniji zahtev je tačnost mera. Model nekretnine je izvor istine, a slike k
 - **2D plan**: sobe u razmeri, prevlačenje prstom i strelicama, zumiranje, strane sveta (sever je gore na planu), zidovi između susednih soba i dugme za priljubljivanje sobe uz susednu.
 - **Spratovi**: prizemlje, spratovi i podrumi. Svaki sprat ima svoj plan, a ime sobe mora da bude jedinstveno samo na istom spratu. Sobu je moguće prebaciti na drugi sprat (mere, vrata, prozori i nameštaj idu sa njom, a ona dobija novo mesto na planu tog sprata).
 - **Zaključavanje i lepljenje soba** na planu: zaključana soba se ne pomera slučajno, a zalepljene sobe istog sprata se pomeraju zajedno.
-- **Stepenice**: prave stepenice između dva sprata (unos mera, smera penjanja i sprata, provera unosa i savet o visini i dubini stepenika). Visina uspona je procena iz visine soba, a ne izmerena vrednost.
+- **Stepenice**: prave stepenice između dva sprata (unos mera, smera penjanja i sprata, provera unosa i savet o visini i dubini stepenika). Crtaju se na planu, u 3D prikazu i u izvozu plana. Visina uspona i broj stepenika su procena iz visine soba, a ne izmerena vrednost.
 - **Provera plana**: preklapanje soba i debljina zida između susednih soba.
 - **Vrata i prozori** na zidovima soba, sa položajem, merama, smerom otvaranja i stranom šarki. Luk otvaranja vrata se crta na planu.
 - **Nameštaj** sa pravim merama i okretanjem, prevlačenje na planu. Provera: izlazi iz sobe, previsok je, preklapanje, blokira vrata. Uz to preporuke o uskim prolazima (manje od 60 cm između predmeta ili do zida), koje nisu greške.
@@ -23,7 +23,7 @@ Svaka provera tvrdi samo ono što stvarno proverava, a aplikacija to ispisuje.
 
 ## Šta još ne radi
 
-Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, crtanje stepenica na planu, u 3D prikazu i u izvozu (za sada se vode samo kao lista), druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
+Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, otvor u međuspratnoj ploči za stepenice u 3D prikazu, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
 
 ## Kako se gradi i pokreće (bez računara)
 

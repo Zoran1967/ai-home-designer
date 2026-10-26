@@ -32,7 +32,8 @@ object PlanExporter {
         rooms: List<Room>,
         openings: List<Opening>,
         furniture: List<Furniture>,
-        format: Format
+        format: Format,
+        stairsLayer: PlanStairsLayer? = null
     ): Uri? = withContext(Dispatchers.IO) {
         val bounds = PlanExportLayout.bounds(rooms) ?: return@withContext null
         val landscape = (bounds.x1 - bounds.x0) >= (bounds.y1 - bounds.y0)
@@ -53,7 +54,7 @@ object PlanExporter {
                     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                     PlanRenderer.draw(
                         Canvas(bitmap), width, height, projectName, northLabel, footerLines,
-                        rooms, openings, furniture
+                        rooms, openings, furniture, stairsLayer
                     )
                     file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
                     bitmap.recycle()
@@ -64,7 +65,7 @@ object PlanExporter {
                     val page = document.startPage(PdfDocument.PageInfo.Builder(width, height, 1).create())
                     PlanRenderer.draw(
                         page.canvas, width, height, projectName, northLabel, footerLines,
-                        rooms, openings, furniture
+                        rooms, openings, furniture, stairsLayer
                     )
                     document.finishPage(page)
                     file.outputStream().use { document.writeTo(it) }

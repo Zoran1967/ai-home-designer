@@ -5,8 +5,10 @@
     <string name="stairs_new">Nove stepenice</string>
     <string name="stairs_edit">Izmeni</string>
     <string name="stairs_empty">Nema stepenica. Dodajte ih dugmetom ispod.</string>
-    <string name="stairs_not_drawn_yet">Stepenice se crtaju na 2D planu: pune linije na donjem spratu, isprekidane na gornjem. Broj crta je procena iz visine soba. Stepenice se crtaju i u 3D prikazu, a u izvozu se još ne prikazuju.</string>
+    <string name="stairs_not_drawn_yet">Stepenice se crtaju na 2D planu: pune linije na donjem spratu, isprekidane na gornjem. Broj crta je procena iz visine soba. Stepenice se crtaju i u 3D prikazu i u izvozu plana (slika i PDF).</string>
     <string name="plan_stairs_up">Stepenice ↑ %1$s</string>
+    <string name="export_stairs_up">Stepenice ↑</string>
+    <string name="export_stairs_from">Stepenice (sa donjeg sprata)</string>
     <string name="plan_stairs_from">Stepenice iz: %1$s</string>
     <string name="scene3d_note_stairs">Stepenice su ilustracija: broj stepenika je procena iz visine soba, a ploča sprata iznad nema otvor za njih.</string>
     <string name="stairs_card_title">%1$s do %2$s</string>
