@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_button">AI ilustracija</string>
+    <string name="ai_title">AI ilustracija</string>
+    <string name="ai_intro">Aplikacija šalje opis vaših soba Google servisu za slike (Gemini) i prikazuje sliku koju on napravi. Za to su potrebni internet i vaš ključ.</string>
+    <string name="ai_key_label">Gemini API ključ</string>
+    <string name="ai_key_note">Ključ se čuva samo na ovom telefonu, u prostoru aplikacije, bez šifrovanja. Ne ulazi u kopiju podataka i šalje se samo Google servisu.</string>
+    <string name="ai_key_help">Ključ pravite u Google AI Studio. Troškove, ako ih ima, određuje vaš Google nalog.</string>
+    <string name="ai_key_clear">Obriši ključ</string>
+    <string name="ai_model_label">Ime modela</string>
+    <string name="ai_model_invalid">Ime modela sme da ima samo slova, cifre, tačku, crticu i podvlaku.</string>
+    <string name="ai_prompt_title">Ovo se šalje servisu</string>
+    <string name="ai_prompt_note">Šalje se samo ovaj tekst, bez slika i bez imena projekta. Nazivi soba i nameštaja šalju se kako ste ih upisali.</string>
+    <string name="ai_send">Napravi ilustraciju</string>
+    <string name="ai_sending">Pravim ilustraciju, može potrajati i nekoliko minuta…</string>
+    <string name="ai_no_rooms">Nema soba sa položajem na planu. Postavite sobe na plan.</string>
+    <string name="ai_need_key">Unesite ključ da biste mogli da pošaljete.</string>
+    <string name="ai_err_network">Nema veze sa servisom. Proverite internet i pokušajte ponovo.</string>
+    <string name="ai_err_http">Servis je vratio grešku: %1$s</string>
+    <string name="ai_err_rate">Previše zahteva ili je kvota potrošena. Pokušajte kasnije. Poruka servisa: %1$s</string>
+    <string name="ai_err_blocked">Servis je odbio zahtev (razlog: %1$s).</string>
+    <string name="ai_err_no_image">Servis nije vratio sliku. Pokušajte ponovo ili probajte drugo ime modela.</string>
+    <string name="ai_err_decode">Slika je stigla, ali se ne može prikazati.</string>
+    <string name="ai_result_title">Ilustracija</string>
+    <string name="ai_image_description">AI ilustracija prostora</string>
+    <string name="ai_disclaimer">Ovo je AI ilustracija. Mere i raspored na slici nisu izmereni i mogu da odstupaju od plana. Za mere važi samo plan i lista soba.</string>
+</resources>

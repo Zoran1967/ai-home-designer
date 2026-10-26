@@ -52,6 +52,7 @@ import com.zoran.aihomedesigner.ui.FurnitureListScreen
 import com.zoran.aihomedesigner.ui.OpeningFormScreen
 import com.zoran.aihomedesigner.ui.OpeningListScreen
 import com.zoran.aihomedesigner.ui.PlanScreen
+import com.zoran.aihomedesigner.ui.AiVisualScreen
 import com.zoran.aihomedesigner.ui.Scene3DScreen
 import com.zoran.aihomedesigner.ui.ProjectListScreen
 import com.zoran.aihomedesigner.ui.ProjectsViewModel
@@ -79,7 +80,8 @@ private enum class Screen {
     EDIT_FURNITURE,
     STAIRS,
     CREATE_STAIRS,
-    EDIT_STAIRS
+    EDIT_STAIRS,
+    AI_VISUAL
 }
 
 class MainActivity : ComponentActivity() {
@@ -249,7 +251,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     BackHandler(enabled = screen != Screen.PROJECTS) {
         screen = when (screen) {
             Screen.CREATE_ROOM, Screen.EDIT_ROOM, Screen.PLAN, Screen.SCENE3D, Screen.OPENINGS, Screen.FURNITURE,
-            Screen.STAIRS -> Screen.ROOMS
+            Screen.STAIRS, Screen.AI_VISUAL -> Screen.ROOMS
             Screen.CREATE_OPENING, Screen.EDIT_OPENING -> Screen.OPENINGS
             Screen.CREATE_FURNITURE, Screen.EDIT_FURNITURE -> Screen.FURNITURE
             Screen.CREATE_STAIRS, Screen.EDIT_STAIRS -> Screen.STAIRS
@@ -331,6 +333,7 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onOpenPlan = { screen = Screen.PLAN },
                 onOpenScene3D = { screen = Screen.SCENE3D },
                 onOpenStairs = { screen = Screen.STAIRS },
+                onOpenAiVisual = { screen = Screen.AI_VISUAL },
                 planImage = planImage,
                 onImportPlanImage = { pickImage.launch(arrayOf("image/*", "application/pdf")) },
                 onRemovePlanImage = { selectedProjectId?.let { viewModel.deletePlanImage(it) } },
@@ -404,6 +407,16 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 furniture = projectFurniture.orEmpty(),
                 onBack = { screen = Screen.ROOMS },
                 stairs = projectStairs.orEmpty()
+            )
+        }
+
+        Screen.AI_VISUAL -> selectedProject?.let {
+            AiVisualScreen(
+                rooms = rooms,
+                openings = projectOpenings.orEmpty(),
+                furniture = projectFurniture.orEmpty(),
+                stairs = projectStairs.orEmpty(),
+                onBack = { screen = Screen.ROOMS }
             )
         }
 

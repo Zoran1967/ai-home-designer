@@ -47,6 +47,7 @@ fun RoomListScreen(
     onOpenPlan: () -> Unit,
     onOpenScene3D: () -> Unit,
     onOpenStairs: () -> Unit,
+    onOpenAiVisual: () -> Unit,
     planImage: PlanImage?,
     onImportPlanImage: () -> Unit,
     onRemovePlanImage: () -> Unit,
@@ -106,6 +107,11 @@ fun RoomListScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
+            if (!rooms.isNullOrEmpty()) {
+                TextButton(onClick = onOpenAiVisual) {
+                    Text(stringResource(R.string.ai_button))
+                }
+            }
             // Izbor sprata: sobe, plan i izvoz odnose se na izabrani sprat
             Row(
                 verticalAlignment = Alignment.CenterVertically,
