@@ -23,7 +23,7 @@ Svaka provera tvrdi samo ono što stvarno proverava, a aplikacija to ispisuje.
 
 ## Šta još ne radi
 
-Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, otvor u međuspratnoj ploči za stepenice u 3D prikazu, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
+Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
 
 ## Kako se gradi i pokreće (bez računara)
 

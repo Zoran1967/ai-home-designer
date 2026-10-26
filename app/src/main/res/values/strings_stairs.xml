@@ -10,7 +10,7 @@
     <string name="export_stairs_up">Stepenice ↑</string>
     <string name="export_stairs_from">Stepenice (sa donjeg sprata)</string>
     <string name="plan_stairs_from">Stepenice iz: %1$s</string>
-    <string name="scene3d_note_stairs">Stepenice su ilustracija: broj stepenika je procena iz visine soba, a ploča sprata iznad nema otvor za njih.</string>
+    <string name="scene3d_note_stairs">Stepenice su ilustracija: broj stepenika je procena iz visine soba, a otvor u podu sprata iznad je samo izgled.</string>
     <string name="stairs_card_title">%1$s do %2$s</string>
     <string name="stairs_card_size">Dužina kraka %1$s m, širina %2$s m. Penje se ka %3$s.</string>
     <string name="stairs_card_steps">%1$d stepenika, visina stepenika oko %2$s cm, gazište oko %3$s cm.</string>

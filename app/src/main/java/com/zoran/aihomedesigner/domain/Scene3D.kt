@@ -17,6 +17,35 @@ data class SceneBox(
     val itemId: String? = null
 )
 
+/** Oduzimanje pravougaonih otvora od pravougaone ploče (za otvor u podu sprata iznad stepenica). */
+object FloorCutouts {
+
+    private const val EPSILON = 1e-9
+
+    /** Ostatak ploče [slab] kad se iz nje izvade [holes], kao pravougaonici koji se ne preklapaju. */
+    fun subtract(slab: StairsFootprint, holes: List<StairsFootprint>): List<StairsFootprint> {
+        var pieces = listOf(slab)
+        for (hole in holes) {
+            pieces = pieces.flatMap { cut(it, hole) }
+        }
+        return pieces.filter { it.x1 - it.x0 > EPSILON && it.y1 - it.y0 > EPSILON }
+    }
+
+    private fun cut(r: StairsFootprint, hole: StairsFootprint): List<StairsFootprint> {
+        val ix0 = maxOf(r.x0, hole.x0)
+        val iy0 = maxOf(r.y0, hole.y0)
+        val ix1 = minOf(r.x1, hole.x1)
+        val iy1 = minOf(r.y1, hole.y1)
+        if (ix0 >= ix1 || iy0 >= iy1) return listOf(r)
+        val result = mutableListOf<StairsFootprint>()
+        if (iy0 > r.y0) result += StairsFootprint(r.x0, r.y0, r.x1, iy0)
+        if (iy1 < r.y1) result += StairsFootprint(r.x0, iy1, r.x1, r.y1)
+        if (ix0 > r.x0) result += StairsFootprint(r.x0, iy0, ix0, iy1)
+        if (ix1 < r.x1) result += StairsFootprint(ix1, iy0, r.x1, iy1)
+        return result
+    }
+}
+
 object SceneBuilder {
 
     /**
@@ -73,6 +102,8 @@ object SceneBuilder {
         val roomsById = placed.associateBy { it.id }
         val offsets = floorOffsets(placed)
         val result = mutableListOf<SceneBox>()
+        // Stepenice koje se crtaju: samo one čiji donji sprat ima sobe (inače se ne zna visina početka)
+        val drawnStairs = stairs.filter { offsets[it.lowerLevel] != null }
 
         for (room in placed) {
             val rx = room.xM!!
@@ -83,7 +114,11 @@ object SceneBuilder {
             val wid = room.widthM
             val h = room.heightM
 
-            result += SceneBox(Vec3(rx, ry, z0 - SLAB_M), Vec3(rx + len, ry + wid, z0), SceneKind.FLOOR, room.name, room.id)
+            // Pod sprata na koji stepenice stižu ima otvor tačno preko stepenica
+            val holes = drawnStairs.filter { it.upperLevel == room.floorLevel }.map { StairsGeometry.footprint(it) }
+            for (piece in FloorCutouts.subtract(StairsFootprint(rx, ry, rx + len, ry + wid), holes)) {
+                result += SceneBox(Vec3(piece.x0, piece.y0, z0 - SLAB_M), Vec3(piece.x1, piece.y1, z0), SceneKind.FLOOR, room.name, room.id)
+            }
             result += SceneBox(Vec3(rx - t, ry - t, z0), Vec3(rx + len + t, ry, z0 + h), SceneKind.WALL, room.name, room.id)
             result += SceneBox(Vec3(rx - t, ry + wid, z0), Vec3(rx + len + t, ry + wid + t, z0 + h), SceneKind.WALL, room.name, room.id)
             result += SceneBox(Vec3(rx - t, ry, z0), Vec3(rx, ry + wid, z0 + h), SceneKind.WALL, room.name, room.id)
@@ -109,9 +144,8 @@ object SceneBuilder {
             result += openingBox(room, opening, offsets.getValue(room.floorLevel))
         }
 
-        for (item in stairs) {
-            val floorZ = offsets[item.lowerLevel] ?: continue
-            result += stairsBoxes(item, floorZ, StairsPlanning.riseM(placed, item.lowerLevel))
+        for (item in drawnStairs) {
+            result += stairsBoxes(item, offsets.getValue(item.lowerLevel), StairsPlanning.riseM(placed, item.lowerLevel))
         }
         return result
     }
@@ -119,7 +153,7 @@ object SceneBuilder {
     /**
      * Stepenice kao niz kvadara (gazišta) koji rastu u pravcu penjanja. Broj stepenika je procena iz visine
      * uspona [riseM] (vidi [StairsGeometry.stepCount]). Poslednji stepenik je sam pod sprata iznad, pa je
-     * gazišta za jedno manje od stepenika. Ploča sprata iznad nema otvor za stepenice.
+     * gazišta za jedno manje od stepenika. Otvor u podu sprata iznad pravi [build] preko [FloorCutouts].
      */
     fun stairsBoxes(stairs: Stairs, floorZ: Double, riseM: Double): List<SceneBox> {
         require(stairs.directionDeg in listOf(0, 90, 180, 270)) { "Pravac penjanja mora biti 0, 90, 180 ili 270" }

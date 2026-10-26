@@ -74,6 +74,6 @@ Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi i prebacivanje 
 6. Nameštaj i provera sudara (gotovo).
 7. Interaktivni 3D prikaz (gotovo, jednostavan).
 8. Uvoz plana i kalibracija razmere (gotovo za slike i prvu stranu PDF-a; ostale strane PDF-a i automatsko prepoznavanje zidova nisu urađeni).
-9. Stepenice i raspored soba: unos, provera i savet o udobnosti su gotovi; zaključavanje i lepljenje soba na planu su gotovi. Stepenice se crtaju na 2D planu (`PlanScreen`), u 3D prikazu (`SceneBuilder.stairsBoxes`) i u izvozu plana (`PlanRenderer`, `PlanStairsLayer`); broj stepenika je procena iz visine soba, a ploča sprata iznad nema otvor za stepenice u 3D prikazu. Geometrija crtanja je u `StairsOnPlan.kt`.
+9. Stepenice i raspored soba: unos, provera i savet o udobnosti su gotovi; zaključavanje i lepljenje soba na planu su gotovi. Stepenice se crtaju na 2D planu (`PlanScreen`), u 3D prikazu (`SceneBuilder.stairsBoxes`) i u izvozu plana (`PlanRenderer`, `PlanStairsLayer`); broj stepenika je procena iz visine soba, a pod sprata iznad ima otvor preko stepenica (`FloorCutouts` u `Scene3D.kt`). Geometrija crtanja je u `StairsOnPlan.kt`.
 10. AI vizuelizacija (opciono, bez ključeva u aplikaciji).
 11. Skeniranje i napredne funkcije.

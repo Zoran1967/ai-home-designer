@@ -108,4 +108,70 @@ class SceneStairsTest {
         val boxes = SceneBuilder.build(listOf(room("a", 0)), emptyList(), emptyList())
         assertTrue(boxes.none { it.kind == SceneKind.STAIRS })
     }
+
+    private fun area(box: SceneBox) = (box.max.x - box.min.x) * (box.max.y - box.min.y)
+
+    private fun rect(x0: Double, y0: Double, x1: Double, y1: Double) = StairsFootprint(x0, y0, x1, y1)
+
+    private fun area(r: StairsFootprint) = (r.x1 - r.x0) * (r.y1 - r.y0)
+
+    @Test
+    fun noHolesLeavesTheSlabWhole() {
+        val slab = rect(0.0, 0.0, 4.0, 3.0)
+        assertEquals(listOf(slab), FloorCutouts.subtract(slab, emptyList()))
+    }
+
+    @Test
+    fun aHoleInTheMiddleLeavesFourPiecesWithTheRemainingArea() {
+        val pieces = FloorCutouts.subtract(rect(0.0, 0.0, 4.0, 3.0), listOf(rect(1.0, 1.0, 3.0, 2.0)))
+        assertEquals(4, pieces.size)
+        assertEquals(12.0 - 2.0, pieces.sumOf { area(it) }, 1e-9)
+    }
+
+    @Test
+    fun aHoleInACornerLeavesTwoPieces() {
+        val pieces = FloorCutouts.subtract(rect(0.0, 0.0, 4.0, 3.0), listOf(rect(-1.0, -1.0, 2.0, 1.0)))
+        assertEquals(2, pieces.size)
+        assertEquals(12.0 - 2.0 * 1.0, pieces.sumOf { area(it) }, 1e-9)
+    }
+
+    @Test
+    fun aHoleCoveringTheWholeSlabLeavesNothing() {
+        assertTrue(FloorCutouts.subtract(rect(0.0, 0.0, 4.0, 3.0), listOf(rect(-1.0, -1.0, 5.0, 4.0))).isEmpty())
+    }
+
+    @Test
+    fun aHoleOutsideTheSlabChangesNothing() {
+        val slab = rect(0.0, 0.0, 4.0, 3.0)
+        assertEquals(listOf(slab), FloorCutouts.subtract(slab, listOf(rect(10.0, 10.0, 12.0, 11.0))))
+    }
+
+    @Test
+    fun twoHolesAreBothCut() {
+        val pieces = FloorCutouts.subtract(
+            rect(0.0, 0.0, 4.0, 3.0),
+            listOf(rect(0.5, 0.5, 1.5, 1.5), rect(2.5, 1.0, 3.5, 2.0))
+        )
+        assertEquals(12.0 - 1.0 - 1.0, pieces.sumOf { area(it) }, 1e-9)
+    }
+
+    @Test
+    fun theUpperFloorHasAHoleOverTheStairsAndTheLowerFloorIsWhole() {
+        val rooms = listOf(room("a", 0), room("b", 1))
+        val boxes = SceneBuilder.build(rooms, emptyList(), emptyList(), listOf(stairs(0)))
+        val lower = boxes.filter { it.kind == SceneKind.FLOOR && it.label == "a" }
+        val upper = boxes.filter { it.kind == SceneKind.FLOOR && it.label == "b" }
+        assertEquals(1, lower.size)
+        assertEquals(12.0, lower.sumOf { area(it) }, 1e-9)
+        // stepenice su 4 x 1 m od x = 1, ali soba (4 x 3 m) se završava na x = 4, pa se seče 3 x 1 m
+        assertEquals(12.0 - 3.0, upper.sumOf { area(it) }, 1e-9)
+    }
+
+    @Test
+    fun withoutStairsTheUpperFloorIsWhole() {
+        val rooms = listOf(room("a", 0), room("b", 1))
+        val boxes = SceneBuilder.build(rooms, emptyList(), emptyList())
+        val upper = boxes.filter { it.kind == SceneKind.FLOOR && it.label == "b" }
+        assertEquals(1, upper.size)
+    }
 }
