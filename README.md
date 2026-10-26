@@ -2,7 +2,7 @@
 
 Android aplikacija za planiranje stana ili kuće: projekti, sobe sa tačnim merama, 2D plan, vrata i prozori, nameštaj i 3D prikaz.
 
-Najvažniji zahtev je tačnost mera. Model nekretnine je izvor istine, a slike koje generiše AI (kad se jednog dana dodaju) nikada ne smeju da menjaju mere.
+Najvažniji zahtev je tačnost mera. Model nekretnine je izvor istine, a slike koje generiše AI nikada ne smeju da menjaju mere.
 
 ## Šta radi (verzija 0.1)
 
@@ -12,6 +12,7 @@ Najvažniji zahtev je tačnost mera. Model nekretnine je izvor istine, a slike k
 - **Spratovi**: prizemlje, spratovi i podrumi. Svaki sprat ima svoj plan, a ime sobe mora da bude jedinstveno samo na istom spratu. Sobu je moguće prebaciti na drugi sprat (mere, vrata, prozori i nameštaj idu sa njom, a ona dobija novo mesto na planu tog sprata).
 - **Zaključavanje i lepljenje soba** na planu: zaključana soba se ne pomera slučajno, a zalepljene sobe istog sprata se pomeraju zajedno.
 - **Stepenice**: prave stepenice između dva sprata (unos mera, smera penjanja i sprata, provera unosa i savet o visini i dubini stepenika). Crtaju se na planu, u 3D prikazu i u izvozu plana. Visina uspona i broj stepenika su procena iz visine soba, a ne izmerena vrednost.
+- **AI ilustracija** (opciono): iz plana se pravi tekstualni opis koji se šalje Google Gemini servisu za slike, uz ključ koji korisnik sam unese u aplikaciji. Slika je samo ilustracija, ne čuva se i ne menja mere. Aplikacija ima pravo na internet samo zbog ovog ekrana.
 - **Provera plana**: preklapanje soba i debljina zida između susednih soba.
 - **Vrata i prozori** na zidovima soba, sa položajem, merama, smerom otvaranja i stranom šarki. Luk otvaranja vrata se crta na planu.
 - **Nameštaj** sa pravim merama i okretanjem, prevlačenje na planu. Provera: izlazi iz sobe, previsok je, preklapanje, blokira vrata. Uz to preporuke o uskim prolazima (manje od 60 cm između predmeta ili do zida), koje nisu greške.
@@ -23,7 +24,7 @@ Svaka provera tvrdi samo ono što stvarno proverava, a aplikacija to ispisuje.
 
 ## Šta još ne radi
 
-Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, AI vizuelizacija, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
+Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
 
 ## Kako se gradi i pokreće (bez računara)
 
