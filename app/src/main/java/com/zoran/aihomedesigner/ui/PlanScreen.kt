@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -55,6 +56,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.zoran.aihomedesigner.R
@@ -71,7 +74,11 @@ import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
 import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.PlanValidator
+import com.zoran.aihomedesigner.data.OpeningSaveResult
 import com.zoran.aihomedesigner.data.RoomSaveResult
+import com.zoran.aihomedesigner.domain.OpeningInput
+import com.zoran.aihomedesigner.domain.WallPicking
+import com.zoran.aihomedesigner.domain.WallTap
 import com.zoran.aihomedesigner.domain.DrawnRect
 import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.MeasureAnchor
@@ -130,6 +137,7 @@ fun PlanScreen(
     onMoveStairs: (String, Double, Double) -> Unit = { _, _, _ -> },
     onCreateDrawnRoom: (RoomInput, PlanPoint, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onUpdateRoom: (String, RoomInput, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
+    onCreateOpening: (String, OpeningInput, (OpeningSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
     onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
     onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
@@ -145,6 +153,9 @@ fun PlanScreen(
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var openingMode by remember { mutableStateOf(false) }
+    var pendingWall by remember { mutableStateOf<WallTap?>(null) }
+    var wallMiss by remember { mutableStateOf(false) }
     var measureEdit by remember { mutableStateOf<MeasureEdit?>(null) }
     var drawMode by remember { mutableStateOf(false) }
     var drawStartPoint by remember { mutableStateOf<PlanPoint?>(null) }
@@ -234,6 +245,7 @@ fun PlanScreen(
     val currentFloorLevel by rememberUpdatedState(floorLevel)
     val currentOnMoveStairs by rememberUpdatedState(onMoveStairs)
     val currentDrawMode by rememberUpdatedState(drawMode)
+    val currentOpeningMode by rememberUpdatedState(openingMode)
     val currentSelectedId by rememberUpdatedState(selectedId)
     val currentOnMoveImage by rememberUpdatedState(onMovePlanImage)
     val currentPlanImage by rememberUpdatedState(planImage)
@@ -384,6 +396,28 @@ fun PlanScreen(
         )
     }
 
+    // Forma za vrata ili prozor na zidu koji je dodirnut na planu (plan ostaje otvoren ispod)
+    pendingWall?.let { tap ->
+        displayRooms.firstOrNull { it.id == tap.roomId }?.let { room ->
+            Dialog(
+                onDismissRequest = { pendingWall = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    OpeningFormScreen(
+                        room = room,
+                        initialOpening = null,
+                        onSubmit = { input, onResult -> onCreateOpening(room.id, input, onResult) },
+                        onDone = { pendingWall = null },
+                        onCancel = { pendingWall = null },
+                        initialSide = tap.side,
+                        tapCenterM = tap.alongM
+                    )
+                }
+            }
+        }
+    }
+
     // Prozor za izmenu jedne mere sobe dodirnute na planu
     measureEdit?.let { edit ->
         displayRooms.firstOrNull { it.id == edit.roomId }?.let { room ->
@@ -439,6 +473,8 @@ fun PlanScreen(
                             val startScale = scale
                             // Crtanje sobe preko slike: prevlačenje pravi pravougaonik, ništa se ne pomera
                             val drawing = currentDrawMode
+                            // Dodavanje vrata ili prozora: dodir bira zid, a prevlačenje samo pomera prikaz
+                            val pickingWall = currentOpeningMode
                             val hit = currentRooms.lastOrNull { room ->
                                 val left = startOffset.x + room.xM!! * startScale
                                 val top = startOffset.y + room.yM!! * startScale
@@ -458,9 +494,9 @@ fun PlanScreen(
                             }
                             val hitItemRoom = hitItem?.let { f -> currentRooms.firstOrNull { it.id == f.roomId } }
                             var draggingFurnitureId: String? =
-                                if (!drawing && hitItem != null && hitItemRoom != null) hitItem.id else null
+                                if (!drawing && !pickingWall && hitItem != null && hitItemRoom != null) hitItem.id else null
                             // Stepenice su iznad sobe, a ispod nameštaja: nameštaj ima prednost, pa one, pa soba.
-                            val hitStairs = if (drawing || hitItem != null) null else currentStairs.lastOrNull { s ->
+                            val hitStairs = if (drawing || pickingWall || hitItem != null) null else currentStairs.lastOrNull { s ->
                                 StairsOnPlan.role(s, currentFloorLevel) != null &&
                                     StairsOnPlan.contains(
                                         s,
@@ -474,7 +510,7 @@ fun PlanScreen(
                             val hitIsLocked = hit != null &&
                                 RoomGroups.members(currentRooms, hit.id).any { it.positionLocked }
                             var draggingId: String? =
-                                if (!drawing && draggingFurnitureId == null && draggingStairsId == null && !hitIsLocked) hit?.id else null
+                                if (!drawing && !pickingWall && draggingFurnitureId == null && draggingStairsId == null && !hitIsLocked) hit?.id else null
                             var moved = false
                             var multiTouch = false
                             var draggingImage = false
@@ -608,7 +644,14 @@ fun PlanScreen(
                                             startPos.y >= top &&
                                             startPos.y <= top + item.footprintWidthM * startScale
                                     }
-                                    if (tappedChip != null && chipRoom != null) {
+                                    if (pickingWall) {
+                                        val tapXm = ((startPos.x - startOffset.x) / startScale).toDouble()
+                                        val tapYm = ((startPos.y - startOffset.y) / startScale).toDouble()
+                                        val tolM = (24.dp.toPx() / startScale).toDouble()
+                                        val wall = WallPicking.nearest(currentRooms, tapXm, tapYm, tolM)
+                                        wallMiss = wall == null
+                                        if (wall != null) pendingWall = wall
+                                    } else if (tappedChip != null && chipRoom != null) {
                                         measureEdit = MeasureEdit(chipRoom.id, tappedChip.kind)
                                     } else if (hitFurniture != null) {
                                         selectedFurnitureId = hitFurniture.id
@@ -806,7 +849,7 @@ fun PlanScreen(
                 }
 
                 // Mere izabrane sobe uz zidove: dodir na meru je izmena (obrađuje se u gestu iznad)
-                if (!drawMode) {
+                if (!drawMode && !openingMode) {
                     selectedRoom?.let { room ->
                         RoomMeasureEdit.anchors(room).forEach { anchor ->
                             MeasureChip(anchor, room, scale, offset)
@@ -834,17 +877,43 @@ fun PlanScreen(
             }
 
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (selectedRoom != null && !drawMode) {
+                if (selectedRoom != null && !drawMode && !openingMode) {
                     Text(
                         text = stringResource(R.string.plan_measure_hint),
                         style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                TextButton(onClick = {
+                    openingMode = !openingMode
+                    wallMiss = false
+                    if (openingMode) {
+                        drawMode = false
+                        moveImageMode = false
+                    }
+                }) {
+                    Text(
+                        stringResource(
+                            if (openingMode) R.string.plan_opening_on else R.string.plan_opening_off
+                        )
+                    )
+                }
+                if (openingMode) {
+                    Text(
+                        text = stringResource(
+                            if (wallMiss) R.string.plan_opening_miss else R.string.plan_opening_hint
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (wallMiss) MaterialTheme.colorScheme.error else Color.Unspecified
                     )
                 }
                 if (planImage != null) {
                     TextButton(onClick = {
                         drawMode = !drawMode
                         drawTooSmall = false
-                        if (drawMode) moveImageMode = false
+                        if (drawMode) {
+                            moveImageMode = false
+                            openingMode = false
+                        }
                     }) {
                         Text(
                             stringResource(
@@ -863,7 +932,10 @@ fun PlanScreen(
                     }
                     TextButton(onClick = {
                         moveImageMode = !moveImageMode
-                        if (moveImageMode) drawMode = false
+                        if (moveImageMode) {
+                            drawMode = false
+                            openingMode = false
+                        }
                     }) {
                         Text(
                             stringResource(

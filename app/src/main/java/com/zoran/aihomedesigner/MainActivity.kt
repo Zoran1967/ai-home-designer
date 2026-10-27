@@ -433,7 +433,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onCreateDrawnRoom = { input, position, onResult ->
                     viewModel.createRoom(project.id, input, onResult, floorLevel = selectedFloor, position = position)
                 },
-                onUpdateRoom = { roomId, input, onResult -> viewModel.updateRoom(roomId, input, onResult) }
+                onUpdateRoom = { roomId, input, onResult -> viewModel.updateRoom(roomId, input, onResult) },
+                onCreateOpening = { roomId, input, onResult -> viewModel.createOpening(roomId, input, onResult) }
             )
         }
 

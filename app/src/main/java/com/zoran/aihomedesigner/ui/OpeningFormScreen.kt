@@ -45,8 +45,10 @@ import com.zoran.aihomedesigner.domain.OpeningPlacementError
 import com.zoran.aihomedesigner.domain.OpeningValidator
 import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.RoomPlacement
 import com.zoran.aihomedesigner.domain.WallGeometry
 import com.zoran.aihomedesigner.domain.WallSide
+import kotlin.math.max
 
 /** Ekran za dodavanje (initialOpening = null) ili izmenu vrata i prozora. */
 @Composable
@@ -55,11 +57,13 @@ fun OpeningFormScreen(
     initialOpening: Opening?,
     onSubmit: (OpeningInput, (OpeningSaveResult) -> Unit) -> Unit,
     onDone: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    initialSide: WallSide? = null,
+    tapCenterM: Double? = null
 ) {
     val key = initialOpening?.id
     var type by rememberSaveable(key) { mutableStateOf(initialOpening?.type ?: OpeningType.DOOR) }
-    var side by rememberSaveable(key) { mutableStateOf(initialOpening?.side ?: WallSide.NORTH) }
+    var side by rememberSaveable(key) { mutableStateOf(initialOpening?.side ?: initialSide ?: WallSide.NORTH) }
     var offset by rememberSaveable(key) {
         mutableStateOf(initialOpening?.let { metersToInputText(it.offsetM) } ?: "")
     }
@@ -82,9 +86,20 @@ fun OpeningFormScreen(
     var hinge by rememberSaveable(key) { mutableStateOf(initialOpening?.hinge) }
     var errors by remember { mutableStateOf<OpeningInputErrors?>(null) }
     var saving by remember { mutableStateOf(false) }
+    // Dok korisnik ne promeni položaj ili zid ručno, položaj se računa iz mesta dodira na planu
+    var offsetTouched by rememberSaveable(key) { mutableStateOf(false) }
 
     val isDoor = type == OpeningType.DOOR
     val wallLength = WallGeometry.wallLengthM(room, side)
+
+    val tapOffsetText: String? = if (initialOpening == null && tapCenterM != null && !offsetTouched) {
+        val w = OpeningValidator.parseMeters(width)
+        val start = if (w == null) tapCenterM else (tapCenterM - w / 2).coerceIn(0.0, max(0.0, wallLength - w))
+        metersToInputText(RoomPlacement.roundToMm(start))
+    } else {
+        null
+    }
+    val shownOffset = tapOffsetText ?: offset
 
     val widthMin = if (isDoor) OpeningLimits.DOOR_MIN_WIDTH_M else OpeningLimits.WINDOW_MIN_WIDTH_M
     val widthMax = if (isDoor) OpeningLimits.DOOR_MAX_WIDTH_M else OpeningLimits.WINDOW_MAX_WIDTH_M
@@ -110,6 +125,13 @@ fun OpeningFormScreen(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
+            if (initialOpening == null && tapCenterM != null) {
+                Text(
+                    text = stringResource(R.string.opening_from_tap_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
 
             SectionTitle(stringResource(R.string.label_opening_type))
             OpeningType.values().forEach { option ->
@@ -130,6 +152,8 @@ fun OpeningFormScreen(
                     selected = side == option,
                     label = wallSideLabel(option),
                     onClick = {
+                        offset = shownOffset
+                        offsetTouched = true
                         side = option
                         errors = errors?.copy(placement = null)
                     }
@@ -139,9 +163,10 @@ fun OpeningFormScreen(
             Spacer(modifier = Modifier.height(16.dp))
             MeasureField(
                 label = stringResource(R.string.field_opening_offset),
-                value = offset,
+                value = shownOffset,
                 onValueChange = {
                     offset = it
+                    offsetTouched = true
                     errors = errors?.copy(offset = null, placement = null)
                 },
                 errorText = errors?.offset?.let {
@@ -162,6 +187,7 @@ fun OpeningFormScreen(
                 onClick = {
                     if (centeredOffset != null) {
                         offset = metersToInputText(centeredOffset)
+                        offsetTouched = true
                         errors = errors?.copy(offset = null, placement = null)
                     }
                 }
@@ -254,7 +280,7 @@ fun OpeningFormScreen(
                         val input = OpeningInput(
                             type = type,
                             side = side,
-                            offset = offset,
+                            offset = shownOffset,
                             width = width,
                             height = height,
                             sillHeight = sill,

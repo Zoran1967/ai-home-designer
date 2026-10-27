@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_opening_off">Dodaj vrata ili prozor na zid</string>
+    <string name="plan_opening_on">Dodavanje je uključeno. Dodirnite da isključite.</string>
+    <string name="plan_opening_hint">Dodirnite zid sobe na mestu gde želite vrata ili prozor.</string>
+    <string name="plan_opening_miss">Nema zida blizu tog mesta. Dodirnite bliže zidu.</string>
+    <string name="opening_from_tap_note">Zid i položaj su određeni prema mestu koje ste dodirnuli: otvor je centriran na to mesto dok upisujete širinu. Sve možete da promenite.</string>
+</resources>
