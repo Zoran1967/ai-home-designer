@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="plan_draw_room_off">Nacrtaj sobu na slici</string>
-    <string name="plan_draw_room_on">Crtanje sobe je uključeno. Dodirnite da isključite.</string>
+    <string name="plan_draw_room_on">Završi crtanje sobe</string>
     <string name="plan_draw_room_hint">Prevucite prstom preko sobe na slici, od jednog ugla do suprotnog. Dva prsta zumiraju.</string>
     <string name="plan_draw_room_too_small">Pravougaonik je premali. Prevucite preko cele sobe.</string>
     <string name="plan_draw_room_size">%1$s x %2$s m</string>

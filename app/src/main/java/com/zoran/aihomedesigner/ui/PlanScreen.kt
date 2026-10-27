@@ -9,6 +9,9 @@ import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
@@ -52,6 +55,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -153,6 +157,7 @@ fun PlanScreen(
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var panelVisible by remember { mutableStateOf(true) }
     var openingMode by remember { mutableStateOf(false) }
     var pendingWall by remember { mutableStateOf<WallTap?>(null) }
     var wallMiss by remember { mutableStateOf(false) }
@@ -455,6 +460,9 @@ fun PlanScreen(
                     applyZoom(Offset(viewSize.width / 2f, viewSize.height / 2f), 1.4f)
                 }) { Text(stringResource(R.string.plan_zoom_in)) }
                 TextButton(onClick = { fitToView() }) { Text(stringResource(R.string.plan_fit)) }
+                TextButton(onClick = { panelVisible = !panelVisible }) {
+                    Text(stringResource(if (panelVisible) R.string.plan_panel_hide else R.string.plan_panel_show))
+                }
             }
 
             Box(
@@ -857,6 +865,29 @@ fun PlanScreen(
                     }
                 }
 
+                // Uputstvo za aktivni režim ide na sam crtež (ispod oznake SEVER), a ne u donji panel
+                val modeHintRes: Int? = when {
+                    openingMode -> if (wallMiss) R.string.plan_opening_miss else R.string.plan_opening_hint
+                    drawMode -> if (drawTooSmall) R.string.plan_draw_room_too_small else R.string.plan_draw_room_hint
+                    else -> null
+                }
+                if (modeHintRes != null) {
+                    Text(
+                        text = stringResource(modeHintRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (wallMiss && openingMode || drawTooSmall && drawMode) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 32.dp, start = 40.dp, end = 40.dp)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    )
+                }
+
                 // Strane sveta uz ivice prikaza, izvan crteža kuće ili stana.
                 CompassLabel(
                     text = stringResource(R.string.compass_north),
@@ -876,7 +907,14 @@ fun PlanScreen(
                 )
             }
 
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            // Donji panel zauzima najviše 38% visine ekrana i može da se lista, da crtež uvek ostane vidljiv.
+            val panelMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.38f).dp
+            if (panelVisible) Column(
+                modifier = Modifier
+                    .heightIn(max = panelMaxHeight)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
                 if (selectedRoom != null && !drawMode && !openingMode) {
                     Text(
                         text = stringResource(R.string.plan_measure_hint),
@@ -897,15 +935,6 @@ fun PlanScreen(
                         )
                     )
                 }
-                if (openingMode) {
-                    Text(
-                        text = stringResource(
-                            if (wallMiss) R.string.plan_opening_miss else R.string.plan_opening_hint
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (wallMiss) MaterialTheme.colorScheme.error else Color.Unspecified
-                    )
-                }
                 if (planImage != null) {
                     TextButton(onClick = {
                         drawMode = !drawMode
@@ -919,15 +948,6 @@ fun PlanScreen(
                             stringResource(
                                 if (drawMode) R.string.plan_draw_room_on else R.string.plan_draw_room_off
                             )
-                        )
-                    }
-                    if (drawMode) {
-                        Text(
-                            text = stringResource(
-                                if (drawTooSmall) R.string.plan_draw_room_too_small else R.string.plan_draw_room_hint
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (drawTooSmall) MaterialTheme.colorScheme.error else Color.Unspecified
                         )
                     }
                     TextButton(onClick = {
