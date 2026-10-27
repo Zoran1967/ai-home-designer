@@ -280,6 +280,12 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun moveStairs(stairsId: String, xM: Double, yM: Double) {
+        launchWrite {
+            stairsRepository.moveStairs(stairsId, xM, yM)
+        }
+    }
+
     fun deleteStairs(stairsId: String) {
         launchWrite {
             stairsRepository.deleteStairs(stairsId)

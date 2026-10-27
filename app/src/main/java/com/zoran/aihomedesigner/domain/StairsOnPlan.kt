@@ -22,6 +22,12 @@ object StairsOnPlan {
         else -> null
     }
 
+    /** Da li tačka plana ([xM], [yM], u metrima) leži na površini koju stepenice zauzimaju (granice se računaju). */
+    fun contains(stairs: Stairs, xM: Double, yM: Double): Boolean {
+        val f = StairsGeometry.footprint(stairs)
+        return xM >= f.x0 && xM <= f.x1 && yM >= f.y0 && yM <= f.y1
+    }
+
     /**
      * Poprečne crte između gazišta. Za [stepCount] stepenika ima [stepCount] - 1 gazišta,
      * pa je unutrašnjih crta [stepCount] - 2. Broj stepenika je procena (vidi [StairsPlanning.riseM]).

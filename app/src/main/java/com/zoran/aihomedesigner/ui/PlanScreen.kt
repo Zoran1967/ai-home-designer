@@ -117,6 +117,7 @@ fun PlanScreen(
     onMoveRoom: (String, Double, Double) -> Unit,
     onPlaceUnplaced: () -> Unit,
     onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> },
+    onMoveStairs: (String, Double, Double) -> Unit = { _, _, _ -> },
     onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
     onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
     onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
@@ -132,6 +133,8 @@ fun PlanScreen(
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var dragStairsId by remember { mutableStateOf<String?>(null) }
+    var dragStairsPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var moveImageMode by remember { mutableStateOf(false) }
     var dragImagePoint by remember { mutableStateOf<PlanPoint?>(null) }
     var stepM by rememberSaveable { mutableStateOf(0.05) }
@@ -172,6 +175,15 @@ fun PlanScreen(
             item
         }
     }
+    // Dok se stepenice prevlače, prikazuju se na privremenom položaju
+    val stairsPoint = dragStairsPoint
+    val displayStairs = stairs.map { item ->
+        if (item.id == dragStairsId && stairsPoint != null) {
+            item.copy(xM = stairsPoint.xM, yM = stairsPoint.yM)
+        } else {
+            item
+        }
+    }
     val selectedFurniture = displayFurniture.firstOrNull { item ->
         item.id == selectedFurnitureId && displayRooms.any { it.id == item.roomId }
     }
@@ -200,6 +212,9 @@ fun PlanScreen(
     val currentRooms by rememberUpdatedState(displayRooms)
     val currentFurniture by rememberUpdatedState(displayFurniture)
     val currentOnMoveFurniture by rememberUpdatedState(onMoveFurniture)
+    val currentStairs by rememberUpdatedState(displayStairs)
+    val currentFloorLevel by rememberUpdatedState(floorLevel)
+    val currentOnMoveStairs by rememberUpdatedState(onMoveStairs)
     val currentOnMoveImage by rememberUpdatedState(onMovePlanImage)
     val currentPlanImage by rememberUpdatedState(planImage)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
@@ -216,6 +231,12 @@ fun PlanScreen(
     LaunchedEffect(furniture) {
         dragFurnitureId = null
         dragFurniturePoint = null
+    }
+
+    // Kad stigne novi spisak stepenica iz baze, privremeni položaj prevlačenja više nije potreban.
+    LaunchedEffect(stairs) {
+        dragStairsId = null
+        dragStairsPoint = null
     }
 
     // Sobe koje još nemaju položaj (npr. starije sobe) dobijaju ga pri otvaranju plana.
@@ -393,12 +414,22 @@ fun PlanScreen(
                             val hitItemRoom = hitItem?.let { f -> currentRooms.firstOrNull { it.id == f.roomId } }
                             var draggingFurnitureId: String? =
                                 if (hitItem != null && hitItemRoom != null) hitItem.id else null
+                            // Stepenice su iznad sobe, a ispod nameštaja: nameštaj ima prednost, pa one, pa soba.
+                            val hitStairs = if (hitItem != null) null else currentStairs.lastOrNull { s ->
+                                StairsOnPlan.role(s, currentFloorLevel) != null &&
+                                    StairsOnPlan.contains(
+                                        s,
+                                        ((startPos.x - startOffset.x) / startScale).toDouble(),
+                                        ((startPos.y - startOffset.y) / startScale).toDouble()
+                                    )
+                            }
+                            var draggingStairsId: String? = hitStairs?.id
                             val startX = hit?.xM ?: 0.0
                             val startY = hit?.yM ?: 0.0
                             val hitIsLocked = hit != null &&
                                 RoomGroups.members(currentRooms, hit.id).any { it.positionLocked }
                             var draggingId: String? =
-                                if (draggingFurnitureId == null && !hitIsLocked) hit?.id else null
+                                if (draggingFurnitureId == null && draggingStairsId == null && !hitIsLocked) hit?.id else null
                             var moved = false
                             var multiTouch = false
                             var draggingImage = false
@@ -416,6 +447,9 @@ fun PlanScreen(
                                         draggingFurnitureId = null
                                         dragFurnitureId = null
                                         dragFurniturePoint = null
+                                        draggingStairsId = null
+                                        dragStairsId = null
+                                        dragStairsPoint = null
                                         draggingImage = false
                                         dragImagePoint = null
                                     }
@@ -435,6 +469,7 @@ fun PlanScreen(
                                     if (moved) {
                                         val id = draggingId
                                         val furnitureId = draggingFurnitureId
+                                        val stairsId = draggingStairsId
                                         if (furnitureId != null && hitItem != null && hitItemRoom != null) {
                                             val maxX = max(0.0, hitItemRoom.lengthM - hitItem.footprintLengthM)
                                             val maxY = max(0.0, hitItemRoom.widthM - hitItem.footprintWidthM)
@@ -446,6 +481,17 @@ fun PlanScreen(
                                             dragFurniturePoint = PlanPoint(nx, ny)
                                             selectedFurnitureId = furnitureId
                                             selectedId = null
+                                        } else if (stairsId != null && hitStairs != null) {
+                                            val nx = RoomPlacement.clampCoordinate(
+                                                RoomPlacement.snapToGrid(hitStairs.xM + total.x / startScale)
+                                            )
+                                            val ny = RoomPlacement.clampCoordinate(
+                                                RoomPlacement.snapToGrid(hitStairs.yM + total.y / startScale)
+                                            )
+                                            dragStairsId = stairsId
+                                            dragStairsPoint = PlanPoint(nx, ny)
+                                            selectedId = null
+                                            selectedFurnitureId = null
                                         } else if (id != null) {
                                             val nx = RoomPlacement.clampCoordinate(
                                                 RoomPlacement.snapToGrid(startX + total.x / startScale)
@@ -513,6 +559,11 @@ fun PlanScreen(
                                             hitItem.rotationDeg
                                         )
                                     }
+                                    val movedStairsId = draggingStairsId
+                                    val stairsPos = dragStairsPoint
+                                    if (movedStairsId != null && stairsPos != null) {
+                                        currentOnMoveStairs(movedStairsId, stairsPos.xM, stairsPos.yM)
+                                    }
                                 }
                             }
                         }
@@ -567,7 +618,7 @@ fun PlanScreen(
                 }
 
                 // Stepenice sa ovog sprata (pune linije) i one koje stižu na ovaj sprat (isprekidane)
-                stairs.forEach { item ->
+                displayStairs.forEach { item ->
                     val role = StairsOnPlan.role(item, floorLevel) ?: return@forEach
                     PlanStairs(
                         stairs = item,
