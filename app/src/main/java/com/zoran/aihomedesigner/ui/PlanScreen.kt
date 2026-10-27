@@ -69,7 +69,11 @@ import com.zoran.aihomedesigner.domain.OpeningType
 import com.zoran.aihomedesigner.domain.PlanIssue
 import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.PlanValidator
+import com.zoran.aihomedesigner.data.RoomSaveResult
+import com.zoran.aihomedesigner.domain.DrawnRect
+import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.RoomDrawing
 import com.zoran.aihomedesigner.domain.RoomGeometry
 import com.zoran.aihomedesigner.domain.RoomGlueResult
 import com.zoran.aihomedesigner.domain.RoomGroups
@@ -85,6 +89,7 @@ import com.zoran.aihomedesigner.domain.StairsRole
 import com.zoran.aihomedesigner.domain.WallOrientation
 import com.zoran.aihomedesigner.domain.WallSide
 import com.zoran.aihomedesigner.domain.WallSnapping
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
@@ -118,6 +123,7 @@ fun PlanScreen(
     onPlaceUnplaced: () -> Unit,
     onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> },
     onMoveStairs: (String, Double, Double) -> Unit = { _, _, _ -> },
+    onCreateDrawnRoom: (RoomInput, PlanPoint, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
     onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
     onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
@@ -133,6 +139,11 @@ fun PlanScreen(
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var drawMode by remember { mutableStateOf(false) }
+    var drawStartPoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var drawEndPoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var drawnRect by remember { mutableStateOf<DrawnRect?>(null) }
+    var drawTooSmall by remember { mutableStateOf(false) }
     var dragStairsId by remember { mutableStateOf<String?>(null) }
     var dragStairsPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var moveImageMode by remember { mutableStateOf(false) }
@@ -215,6 +226,7 @@ fun PlanScreen(
     val currentStairs by rememberUpdatedState(displayStairs)
     val currentFloorLevel by rememberUpdatedState(floorLevel)
     val currentOnMoveStairs by rememberUpdatedState(onMoveStairs)
+    val currentDrawMode by rememberUpdatedState(drawMode)
     val currentOnMoveImage by rememberUpdatedState(onMovePlanImage)
     val currentPlanImage by rememberUpdatedState(planImage)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
@@ -354,6 +366,16 @@ fun PlanScreen(
         }
     }
 
+    // Prozor za sobu nacrtanu preko slike: ime i visina se upisuju, a dužina i širina se predlažu sa slike
+    drawnRect?.let { rect ->
+        DrawRoomDialog(
+            rect = rect,
+            onSubmit = { input, onResult -> onCreateDrawnRoom(input, PlanPoint(rect.xM, rect.yM), onResult) },
+            onDone = { drawnRect = null },
+            onCancel = { drawnRect = null }
+        )
+    }
+
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val gridStep = gridStepM(scale)
 
@@ -394,6 +416,8 @@ fun PlanScreen(
                             val startPos = down.position
                             val startOffset = offset
                             val startScale = scale
+                            // Crtanje sobe preko slike: prevlačenje pravi pravougaonik, ništa se ne pomera
+                            val drawing = currentDrawMode
                             val hit = currentRooms.lastOrNull { room ->
                                 val left = startOffset.x + room.xM!! * startScale
                                 val top = startOffset.y + room.yM!! * startScale
@@ -413,9 +437,9 @@ fun PlanScreen(
                             }
                             val hitItemRoom = hitItem?.let { f -> currentRooms.firstOrNull { it.id == f.roomId } }
                             var draggingFurnitureId: String? =
-                                if (hitItem != null && hitItemRoom != null) hitItem.id else null
+                                if (!drawing && hitItem != null && hitItemRoom != null) hitItem.id else null
                             // Stepenice su iznad sobe, a ispod nameštaja: nameštaj ima prednost, pa one, pa soba.
-                            val hitStairs = if (hitItem != null) null else currentStairs.lastOrNull { s ->
+                            val hitStairs = if (drawing || hitItem != null) null else currentStairs.lastOrNull { s ->
                                 StairsOnPlan.role(s, currentFloorLevel) != null &&
                                     StairsOnPlan.contains(
                                         s,
@@ -429,7 +453,7 @@ fun PlanScreen(
                             val hitIsLocked = hit != null &&
                                 RoomGroups.members(currentRooms, hit.id).any { it.positionLocked }
                             var draggingId: String? =
-                                if (draggingFurnitureId == null && draggingStairsId == null && !hitIsLocked) hit?.id else null
+                                if (!drawing && draggingFurnitureId == null && draggingStairsId == null && !hitIsLocked) hit?.id else null
                             var moved = false
                             var multiTouch = false
                             var draggingImage = false
@@ -450,6 +474,8 @@ fun PlanScreen(
                                         draggingStairsId = null
                                         dragStairsId = null
                                         dragStairsPoint = null
+                                        drawStartPoint = null
+                                        drawEndPoint = null
                                         draggingImage = false
                                         dragImagePoint = null
                                     }
@@ -470,7 +496,16 @@ fun PlanScreen(
                                         val id = draggingId
                                         val furnitureId = draggingFurnitureId
                                         val stairsId = draggingStairsId
-                                        if (furnitureId != null && hitItem != null && hitItemRoom != null) {
+                                        if (drawing) {
+                                            drawStartPoint = PlanPoint(
+                                                ((startPos.x - startOffset.x) / startScale).toDouble(),
+                                                ((startPos.y - startOffset.y) / startScale).toDouble()
+                                            )
+                                            drawEndPoint = PlanPoint(
+                                                ((change.position.x - startOffset.x) / startScale).toDouble(),
+                                                ((change.position.y - startOffset.y) / startScale).toDouble()
+                                            )
+                                        } else if (furnitureId != null && hitItem != null && hitItemRoom != null) {
                                             val maxX = max(0.0, hitItemRoom.lengthM - hitItem.footprintLengthM)
                                             val maxY = max(0.0, hitItemRoom.widthM - hitItem.footprintWidthM)
                                             val nx = RoomPlacement.snapToGrid(hitItem.xM + total.x / startScale)
@@ -521,7 +556,17 @@ fun PlanScreen(
                             } while (event.changes.any { it.pressed })
 
                             if (!multiTouch) {
-                                if (!moved) {
+                                if (drawing) {
+                                    val s = drawStartPoint
+                                    val e = drawEndPoint
+                                    drawStartPoint = null
+                                    drawEndPoint = null
+                                    if (moved && s != null && e != null) {
+                                        val rect = RoomDrawing.rect(s, e)
+                                        drawnRect = rect
+                                        drawTooSmall = rect == null
+                                    }
+                                } else if (!moved) {
                                     val hitFurniture = currentFurniture.lastOrNull { item ->
                                         val itemRoom = currentRooms.firstOrNull { it.id == item.roomId }
                                             ?: return@lastOrNull false
@@ -697,6 +742,36 @@ fun PlanScreen(
                         .padding(8.dp)
                 )
 
+                // Pravougaonik koji se trenutno crta preko slike, sa merama koje pokazuje slika
+                val rubberStart = drawStartPoint
+                val rubberEnd = drawEndPoint
+                if (rubberStart != null && rubberEnd != null) {
+                    val rx0 = min(rubberStart.xM, rubberEnd.xM)
+                    val ry0 = min(rubberStart.yM, rubberEnd.yM)
+                    val rw = abs(rubberEnd.xM - rubberStart.xM)
+                    val rh = abs(rubberEnd.yM - rubberStart.yM)
+                    val rubberColor = MaterialTheme.colorScheme.primary
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val topLeft = Offset(offset.x + (rx0 * scale).toFloat(), offset.y + (ry0 * scale).toFloat())
+                        val rubberSize = Size((rw * scale).toFloat(), (rh * scale).toFloat())
+                        drawRect(color = rubberColor.copy(alpha = 0.2f), topLeft = topLeft, size = rubberSize)
+                        drawRect(color = rubberColor, topLeft = topLeft, size = rubberSize, style = Stroke(width = 3f))
+                    }
+                    Text(
+                        text = stringResource(R.string.plan_draw_room_size, formatMeters(rw), formatMeters(rh)),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = rubberColor,
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (offset.x + (rx0 * scale).toFloat()).roundToInt(),
+                                    (offset.y + (ry0 * scale).toFloat()).roundToInt()
+                                )
+                            }
+                            .padding(4.dp)
+                    )
+                }
+
                 // Strane sveta uz ivice prikaza, izvan crteža kuće ili stana.
                 CompassLabel(
                     text = stringResource(R.string.compass_north),
@@ -718,7 +793,30 @@ fun PlanScreen(
 
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 if (planImage != null) {
-                    TextButton(onClick = { moveImageMode = !moveImageMode }) {
+                    TextButton(onClick = {
+                        drawMode = !drawMode
+                        drawTooSmall = false
+                        if (drawMode) moveImageMode = false
+                    }) {
+                        Text(
+                            stringResource(
+                                if (drawMode) R.string.plan_draw_room_on else R.string.plan_draw_room_off
+                            )
+                        )
+                    }
+                    if (drawMode) {
+                        Text(
+                            text = stringResource(
+                                if (drawTooSmall) R.string.plan_draw_room_too_small else R.string.plan_draw_room_hint
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (drawTooSmall) MaterialTheme.colorScheme.error else Color.Unspecified
+                        )
+                    }
+                    TextButton(onClick = {
+                        moveImageMode = !moveImageMode
+                        if (moveImageMode) drawMode = false
+                    }) {
                         Text(
                             stringResource(
                                 if (moveImageMode) R.string.plan_image_move_on else R.string.plan_image_move_off

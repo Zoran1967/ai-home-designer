@@ -29,6 +29,7 @@ import com.zoran.aihomedesigner.domain.Project
 import com.zoran.aihomedesigner.domain.PropertyType
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomGlueResult
+import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.RoomInput
 import com.zoran.aihomedesigner.domain.Stairs
 import com.zoran.aihomedesigner.domain.StairsInput
@@ -129,10 +130,11 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         projectId: String,
         input: RoomInput,
         onResult: (RoomSaveResult) -> Unit,
-        floorLevel: Int = 0
+        floorLevel: Int = 0,
+        position: PlanPoint? = null
     ) {
         launchSave<RoomSaveResult>(onResult, RoomSaveResult.NotFound) {
-            roomRepository.createRoom(projectId, input, floorLevel = floorLevel)
+            roomRepository.createRoom(projectId, input, floorLevel = floorLevel, at = position)
         }
     }
 

@@ -429,7 +429,10 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onUnglueRoom = { id -> viewModel.unglueRoom(id) },
                 onPlaceUnplaced = { viewModel.placeUnplacedRooms(project.id) },
                 onMoveFurniture = { id, x, y, rotation -> viewModel.moveFurniture(id, x, y, rotation) },
-                onMoveStairs = { id, x, y -> viewModel.moveStairs(id, x, y) }
+                onMoveStairs = { id, x, y -> viewModel.moveStairs(id, x, y) },
+                onCreateDrawnRoom = { input, position, onResult ->
+                    viewModel.createRoom(project.id, input, onResult, floorLevel = selectedFloor, position = position)
+                }
             )
         }
 

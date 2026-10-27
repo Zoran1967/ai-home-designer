@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_draw_room_off">Nacrtaj sobu na slici</string>
+    <string name="plan_draw_room_on">Crtanje sobe je uključeno. Dodirnite da isključite.</string>
+    <string name="plan_draw_room_hint">Prevucite prstom preko sobe na slici, od jednog ugla do suprotnog. Dva prsta zumiraju.</string>
+    <string name="plan_draw_room_too_small">Pravougaonik je premali. Prevucite preko cele sobe.</string>
+    <string name="plan_draw_room_size">%1$s x %2$s m</string>
+    <string name="draw_room_title">Nova soba sa slike</string>
+    <string name="draw_room_note">Mere sa slike su samo predlog. Ono što upišete je mera sobe, a slika služi da soba stane na pravo mesto.</string>
+    <string name="draw_room_field_name">Ime sobe</string>
+    <string name="draw_room_field_length">Dužina (m)</string>
+    <string name="draw_room_field_width">Širina (m)</string>
+    <string name="draw_room_field_height">Visina zida (m)</string>
+    <string name="draw_room_hint_height">Obavezno, na primer 2,6</string>
+    <string name="draw_room_mismatch_length">Po slici je dužina oko %1$s m, a upisali ste %2$s m. Proverite meru ili kalibraciju slike.</string>
+    <string name="draw_room_mismatch_width">Po slici je širina oko %1$s m, a upisali ste %2$s m. Proverite meru ili kalibraciju slike.</string>
+</resources>

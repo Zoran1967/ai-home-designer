@@ -4,6 +4,7 @@ import com.zoran.aihomedesigner.domain.DimensionSource
 import com.zoran.aihomedesigner.domain.FloorMove
 import com.zoran.aihomedesigner.domain.FloorMoveResult
 import com.zoran.aihomedesigner.domain.Floors
+import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.Room
 import com.zoran.aihomedesigner.domain.RoomGlueResult
 import com.zoran.aihomedesigner.domain.RoomGroups
@@ -31,13 +32,15 @@ class RoomRepository(private val dao: RoomDao) {
 
     /**
      * Proverava unos, pa tek onda upisuje sobu. Mere koje je korisnik upisao vode se kao USER_CONFIRMED.
-     * Nova soba dobija početni položaj na planu (desno od postojećih soba).
+     * Nova soba dobija početni položaj na planu (desno od postojećih soba), osim ako je zadat položaj [at]
+     * (npr. soba nacrtana preko slike plana). Neispravne koordinate se zamenjuju početnim položajem.
      */
     suspend fun createRoom(
         projectId: String,
         input: RoomInput,
         nowMillis: Long = System.currentTimeMillis(),
-        floorLevel: Int = 0
+        floorLevel: Int = 0,
+        at: PlanPoint? = null
     ): RoomSaveResult {
         val level = floorLevel.coerceIn(Floors.MIN_LEVEL, Floors.MAX_LEVEL)
         val sameFloor = dao.getByProject(projectId)
@@ -51,7 +54,9 @@ class RoomRepository(private val dao: RoomDao) {
             is RoomValidation.Valid -> {
                 // Položaj se računa samo u odnosu na sobe istog sprata
                 val existing = sameFloor
-                val position = RoomPlacement.nextPosition(existing)
+                val position = at?.takeIf {
+                    RoomPlacement.isValidCoordinate(it.xM) && RoomPlacement.isValidCoordinate(it.yM)
+                } ?: RoomPlacement.nextPosition(existing)
                 val room = Room(
                     id = Room.newId(),
                     projectId = projectId,
