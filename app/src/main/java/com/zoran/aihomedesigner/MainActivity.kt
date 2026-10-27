@@ -57,6 +57,7 @@ import com.zoran.aihomedesigner.ui.Scene3DScreen
 import com.zoran.aihomedesigner.ui.ProjectListScreen
 import com.zoran.aihomedesigner.ui.ProjectsViewModel
 import com.zoran.aihomedesigner.ui.RoomFormScreen
+import com.zoran.aihomedesigner.ui.PdfPageDialog
 import com.zoran.aihomedesigner.ui.RoomListScreen
 import com.zoran.aihomedesigner.ui.StairsFormScreen
 import com.zoran.aihomedesigner.ui.StairsListScreen
@@ -142,23 +143,54 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
     }
     val planImage by planImageFlow.collectAsState(initial = null)
 
-    // Izbor slike plana iz galerije: slika se kopira u aplikaciju, pa ide na kalibraciju razmere.
+    // PDF sa više strana: korisnik bira stranu pre uvoza (uri i broj strana PDF-a)
+    var pendingPdf by remember { mutableStateOf<Pair<Uri, Int>?>(null) }
+
+    fun importPlan(projectId: String, uri: Uri, pageNumber: Int, announcePage: Boolean) {
+        viewModel.importPlanImage(projectId, uri, pageNumber) { imported ->
+            if (imported != null) {
+                pendingImage = imported
+                screen = Screen.CALIBRATE
+                if (announcePage) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.plan_image_pdf_page_imported, pageNumber),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } else {
+                Toast.makeText(context, R.string.plan_image_import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // Izbor slike ili PDF-a plana: datoteka se kopira u aplikaciju, pa ide na kalibraciju razmere.
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         val projectId = selectedProjectId
         if (uri != null && projectId != null) {
-            val isPdf = context.contentResolver.getType(uri) == "application/pdf"
-            viewModel.importPlanImage(projectId, uri) { imported ->
-                if (imported != null) {
-                    pendingImage = imported
-                    screen = Screen.CALIBRATE
-                    if (isPdf) {
-                        Toast.makeText(context, R.string.plan_image_pdf_first_page, Toast.LENGTH_LONG).show()
+            if (context.contentResolver.getType(uri) == "application/pdf") {
+                viewModel.pdfPageCount(uri) { count ->
+                    if (count != null && count > 1) {
+                        pendingPdf = uri to count
+                    } else {
+                        importPlan(projectId, uri, 1, announcePage = false)
                     }
-                } else {
-                    Toast.makeText(context, R.string.plan_image_import_failed, Toast.LENGTH_LONG).show()
                 }
+            } else {
+                importPlan(projectId, uri, 1, announcePage = false)
             }
         }
+    }
+
+    pendingPdf?.let { (pdfUri, pageCount) ->
+        PdfPageDialog(
+            pageCount = pageCount,
+            onConfirm = { page ->
+                pendingPdf = null
+                selectedProjectId?.let { importPlan(it, pdfUri, page, announcePage = true) }
+            },
+            onCancel = { pendingPdf = null }
+        )
     }
 
     val roomsFlow = remember(selectedProjectId) {

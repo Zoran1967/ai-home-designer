@@ -296,9 +296,21 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         planImageRepository.observe(projectId)
 
     /** Kopira izabranu sliku u aplikaciju. Rezultat je null ako se slika ne može koristiti. */
-    fun importPlanImage(projectId: String, uri: Uri, onResult: (ImportedImage?) -> Unit) {
+    fun importPlanImage(
+        projectId: String,
+        uri: Uri,
+        pageNumber: Int = 1,
+        onResult: (ImportedImage?) -> Unit
+    ) {
         viewModelScope.launch {
-            onResult(planImageRepository.copyImage(projectId, uri))
+            onResult(planImageRepository.copyImage(projectId, uri, pageNumber))
+        }
+    }
+
+    /** Broj strana PDF-a, ili null ako se PDF ne može otvoriti. */
+    fun pdfPageCount(uri: Uri, onResult: (Int?) -> Unit) {
+        viewModelScope.launch {
+            onResult(planImageRepository.pdfPageCount(uri))
         }
     }
 

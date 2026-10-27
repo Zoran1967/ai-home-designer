@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="plan_image_pdf_first_page">PDF ima više strana: uvozi se samo prva strana.</string>
+    <string name="plan_pdf_page_title">Koju stranu PDF-a uvesti?</string>
+    <string name="plan_pdf_page_field">Broj strane</string>
+    <string name="plan_pdf_page_hint">PDF ima %1$d strana. Upišite broj od 1 do %1$d.</string>
+    <string name="plan_pdf_page_error">Upišite ceo broj od 1 do %1$d.</string>
+    <string name="plan_pdf_page_ok">Uvezi</string>
+    <string name="plan_image_pdf_page_imported">Uvezena je strana %1$d. Razmeru podesite kalibracijom.</string>
 </resources>

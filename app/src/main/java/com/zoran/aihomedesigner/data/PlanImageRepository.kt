@@ -37,17 +37,30 @@ class PlanImageRepository(
     fun observe(projectId: String): Flow<PlanImage?> =
         dao.observeByProject(projectId).map { it?.toDomainOrNull() }
 
+    /** Broj strana PDF-a, ili null ako se PDF ne može otvoriti (oštećen, zaštićen lozinkom). */
+    suspend fun pdfPageCount(uri: Uri): Int? = withContext(Dispatchers.IO) {
+        try {
+            val descriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return@withContext null
+            descriptor.use { pfd -> PdfRenderer(pfd).use { it.pageCount } }
+        } catch (e: java.io.IOException) {
+            null
+        } catch (e: SecurityException) {
+            null
+        }
+    }
+
     /**
      * Kopira izabranu sliku u privatni prostor aplikacije i čita njene dimenzije u pikselima.
+     * Kod PDF-a se uvozi strana [pageNumber] (od 1), a kod slike se taj broj ne koristi.
      * Vraća null ako se slika ne može pročitati, prevelika je ili nije slika.
      */
-    suspend fun copyImage(projectId: String, uri: Uri): ImportedImage? = withContext(Dispatchers.IO) {
+    suspend fun copyImage(projectId: String, uri: Uri, pageNumber: Int = 1): ImportedImage? = withContext(Dispatchers.IO) {
         val name = "plan_${projectId}_${System.currentTimeMillis()}.img"
         val target = File(directory, name)
         try {
-            // PDF: iscrtava se prva strana u sliku (ostale strane se ne uvoze)
+            // PDF: iscrtava se izabrana strana u sliku (ostale strane se ne uvoze)
             if (context.contentResolver.getType(uri) == "application/pdf") {
-                val rendered = renderPdfFirstPage(uri, target, name)
+                val rendered = renderPdfPage(uri, target, name, pageNumber)
                 if (rendered == null) target.delete()
                 return@withContext rendered
             }
@@ -77,15 +90,15 @@ class PlanImageRepository(
     }
 
     /**
-     * Iscrtava prvu stranu PDF-a u PNG sa belom pozadinom. Vraća null ako PDF nema strana, ako je zaštićen
-     * lozinkom ili oštećen.
+     * Iscrtava stranu [pageNumber] (brojanje od 1) PDF-a u PNG sa belom pozadinom. Vraća null ako strana ne
+     * postoji, ako je PDF zaštićen lozinkom ili oštećen.
      */
-    private fun renderPdfFirstPage(uri: Uri, target: File, name: String): ImportedImage? {
+    private fun renderPdfPage(uri: Uri, target: File, name: String, pageNumber: Int): ImportedImage? {
         val descriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
         descriptor.use { pfd ->
             PdfRenderer(pfd).use { renderer ->
-                if (renderer.pageCount < 1) return null
-                renderer.openPage(0).use { page ->
+                if (pageNumber < 1 || pageNumber > renderer.pageCount) return null
+                renderer.openPage(pageNumber - 1).use { page ->
                     val size = PdfSizing.sizeFor(page.width, page.height) ?: return null
                     val bitmap = Bitmap.createBitmap(size.widthPx, size.heightPx, Bitmap.Config.ARGB_8888)
                     bitmap.eraseColor(Color.WHITE)
