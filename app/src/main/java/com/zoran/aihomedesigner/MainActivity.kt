@@ -434,7 +434,9 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                     viewModel.createRoom(project.id, input, onResult, floorLevel = selectedFloor, position = position)
                 },
                 onUpdateRoom = { roomId, input, onResult -> viewModel.updateRoom(roomId, input, onResult) },
-                onCreateOpening = { roomId, input, onResult -> viewModel.createOpening(roomId, input, onResult) }
+                onCreateOpening = { roomId, input, onResult -> viewModel.createOpening(roomId, input, onResult) },
+                onUpdateOpening = { id, input, onResult -> viewModel.updateOpening(id, input, onResult) },
+                onDeleteOpening = { id -> viewModel.deleteOpening(id) }
             )
         }
 

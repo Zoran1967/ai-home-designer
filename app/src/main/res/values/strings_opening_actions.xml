@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_openings_hint">Dodirnite vrata ili prozor na planu da ih obrišete ili okrenete otvaranje.</string>
+    <string name="opening_actions_title">%1$s: %2$s</string>
+    <string name="opening_actions_info">%1$s, %2$s x %3$s m</string>
+    <string name="opening_actions_swing_now">Otvaranje: %1$s</string>
+    <string name="opening_actions_hinge_now">Šarke: %1$s</string>
+    <string name="opening_actions_flip_swing">Okreni otvaranje (ka sobi ili od sobe)</string>
+    <string name="opening_actions_flip_hinge">Prebaci šarke na drugu stranu</string>
+    <string name="opening_actions_edit">Izmeni mere i položaj</string>
+    <string name="opening_actions_close">Zatvori</string>
+    <string name="opening_actions_failed">Promena nije prihvaćena, otvor verovatno više ne staje u zid. Otvorite izmenu da vidite zašto.</string>
+    <string name="opening_actions_delete_title">Brisanje otvora</string>
+    <string name="opening_actions_delete_message">Obrisati: %1$s (%2$s) u sobi „%3$s“?</string>
+</resources>

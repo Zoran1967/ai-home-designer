@@ -80,6 +80,7 @@ import com.zoran.aihomedesigner.domain.PlanPoint
 import com.zoran.aihomedesigner.domain.PlanValidator
 import com.zoran.aihomedesigner.data.OpeningSaveResult
 import com.zoran.aihomedesigner.data.RoomSaveResult
+import com.zoran.aihomedesigner.domain.OpeningActions
 import com.zoran.aihomedesigner.domain.OpeningInput
 import com.zoran.aihomedesigner.domain.WallPicking
 import com.zoran.aihomedesigner.domain.WallTap
@@ -142,6 +143,8 @@ fun PlanScreen(
     onCreateDrawnRoom: (RoomInput, PlanPoint, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onUpdateRoom: (String, RoomInput, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onCreateOpening: (String, OpeningInput, (OpeningSaveResult) -> Unit) -> Unit = { _, _, _ -> },
+    onUpdateOpening: (String, OpeningInput, (OpeningSaveResult) -> Unit) -> Unit = { _, _, _ -> },
+    onDeleteOpening: (String) -> Unit = {},
     onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
     onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
     onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
@@ -158,6 +161,8 @@ fun PlanScreen(
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
     var panelVisible by remember { mutableStateOf(true) }
+    var openingActionId by remember { mutableStateOf<String?>(null) }
+    var openingEditId by remember { mutableStateOf<String?>(null) }
     var openingMode by remember { mutableStateOf(false) }
     var pendingWall by remember { mutableStateOf<WallTap?>(null) }
     var wallMiss by remember { mutableStateOf(false) }
@@ -251,6 +256,7 @@ fun PlanScreen(
     val currentOnMoveStairs by rememberUpdatedState(onMoveStairs)
     val currentDrawMode by rememberUpdatedState(drawMode)
     val currentOpeningMode by rememberUpdatedState(openingMode)
+    val currentOpenings by rememberUpdatedState(openings)
     val currentSelectedId by rememberUpdatedState(selectedId)
     val currentOnMoveImage by rememberUpdatedState(onMovePlanImage)
     val currentPlanImage by rememberUpdatedState(planImage)
@@ -419,6 +425,42 @@ fun PlanScreen(
                         tapCenterM = tap.alongM
                     )
                 }
+            }
+        }
+    }
+
+    // Radnje nad vratima ili prozorom dodirnutim na planu
+    openingActionId?.let { id ->
+        val opening = openings.firstOrNull { it.id == id }
+        val room = opening?.let { o -> displayRooms.firstOrNull { it.id == o.roomId } }
+        if (opening != null && room != null) {
+            if (openingEditId == id) {
+                Dialog(
+                    onDismissRequest = { openingEditId = null },
+                    properties = DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        OpeningFormScreen(
+                            room = room,
+                            initialOpening = opening,
+                            onSubmit = { input, onResult -> onUpdateOpening(id, input, onResult) },
+                            onDone = { openingEditId = null },
+                            onCancel = { openingEditId = null }
+                        )
+                    }
+                }
+            } else {
+                OpeningActionsDialog(
+                    opening = opening,
+                    room = room,
+                    onApply = { input, onResult -> onUpdateOpening(id, input, onResult) },
+                    onEdit = { openingEditId = id },
+                    onDelete = {
+                        onDeleteOpening(id)
+                        openingActionId = null
+                    },
+                    onClose = { openingActionId = null }
+                )
             }
         }
     }
@@ -642,6 +684,14 @@ fun PlanScreen(
                                                 abs(startPos.y - (startOffset.y + (a.yM * startScale).toFloat())) <= chipHalfH
                                         }
                                     }
+                                    // Dodir na vrata ili prozor otvara radnje nad njima (okretanje, izmena, brisanje)
+                                    val tappedOpening = OpeningActions.nearestOpening(
+                                        currentRooms,
+                                        currentOpenings,
+                                        ((startPos.x - startOffset.x) / startScale).toDouble(),
+                                        ((startPos.y - startOffset.y) / startScale).toDouble(),
+                                        (20.dp.toPx() / startScale).toDouble()
+                                    )
                                     val hitFurniture = currentFurniture.lastOrNull { item ->
                                         val itemRoom = currentRooms.firstOrNull { it.id == item.roomId }
                                             ?: return@lastOrNull false
@@ -661,6 +711,8 @@ fun PlanScreen(
                                         if (wall != null) pendingWall = wall
                                     } else if (tappedChip != null && chipRoom != null) {
                                         measureEdit = MeasureEdit(chipRoom.id, tappedChip.kind)
+                                    } else if (tappedOpening != null) {
+                                        openingActionId = tappedOpening.id
                                     } else if (hitFurniture != null) {
                                         selectedFurnitureId = hitFurniture.id
                                         selectedId = null
@@ -918,6 +970,12 @@ fun PlanScreen(
                 if (selectedRoom != null && !drawMode && !openingMode) {
                     Text(
                         text = stringResource(R.string.plan_measure_hint),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                if (openings.isNotEmpty() && !drawMode && !openingMode) {
+                    Text(
+                        text = stringResource(R.string.plan_openings_hint),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
