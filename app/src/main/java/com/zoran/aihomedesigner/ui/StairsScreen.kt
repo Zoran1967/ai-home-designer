@@ -47,6 +47,8 @@ import com.zoran.aihomedesigner.domain.Stairs
 import com.zoran.aihomedesigner.domain.StairsAdvice
 import com.zoran.aihomedesigner.domain.StairsGeometry
 import com.zoran.aihomedesigner.domain.StairsInput
+import com.zoran.aihomedesigner.domain.StairsIssue
+import com.zoran.aihomedesigner.domain.StairsLayoutValidator
 import com.zoran.aihomedesigner.domain.StairsInputErrors
 import com.zoran.aihomedesigner.domain.StairsLimits
 import com.zoran.aihomedesigner.domain.StairsPlanning
@@ -88,6 +90,11 @@ fun StairsListScreen(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 4.dp)
             )
+            Text(
+                text = stringResource(R.string.stairs_checks_note),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp)
+            )
             if (stairs != null && stairs.isEmpty()) {
                 Text(
                     text = stringResource(R.string.stairs_empty),
@@ -103,6 +110,7 @@ fun StairsListScreen(
                     StairsCard(
                         item = item,
                         riseM = StairsPlanning.riseM(rooms, item.lowerLevel),
+                        issues = StairsLayoutValidator.validate(item, stairs.orEmpty(), rooms),
                         onEdit = { onEdit(item) },
                         onDelete = { toDelete = item }
                     )
@@ -138,7 +146,13 @@ fun StairsListScreen(
 }
 
 @Composable
-private fun StairsCard(item: Stairs, riseM: Double, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun StairsCard(
+    item: Stairs,
+    riseM: Double,
+    issues: List<StairsIssue>,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     val comfort = StairsGeometry.analyze(riseM, item.lengthM)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -178,6 +192,19 @@ private fun StairsCard(item: Stairs, riseM: Double, onEdit: () -> Unit, onDelete
                             R.string.stairs_advice_tread,
                             formatCentimeters(StairsGeometry.MIN_COMFORT_TREAD_M)
                         )
+                    },
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            issues.forEach { issue ->
+                Text(
+                    text = when (issue) {
+                        StairsIssue.NotInsideRoomBelow ->
+                            stringResource(R.string.stairs_issue_below, floorLabel(item.lowerLevel))
+                        StairsIssue.NotInsideRoomAbove ->
+                            stringResource(R.string.stairs_issue_above, floorLabel(item.upperLevel))
+                        is StairsIssue.OverlapsStairs -> stringResource(R.string.stairs_issue_overlap)
                     },
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium

@@ -15,6 +15,10 @@
     <string name="stairs_card_size">Dužina kraka %1$s m, širina %2$s m. Penje se ka %3$s.</string>
     <string name="stairs_card_steps">%1$d stepenika, visina stepenika oko %2$s cm, gazište oko %3$s cm.</string>
     <string name="stairs_card_rise_note">Visina uspona je procena (%1$s m): najviši zid na donjem spratu i međuspratna ploča.</string>
+    <string name="stairs_checks_note">Provera položaja: da li su stepenice cele unutar jedne sobe na donjem i na gornjem spratu i da li se preklapaju sa drugim stepenicama. Ne proverava se prolaz kroz vrata ni visina iznad glave.</string>
+    <string name="stairs_issue_below">Stepenice nisu cele unutar jedne sobe na spratu „%1$s“. Pomerite ih na planu.</string>
+    <string name="stairs_issue_above">Na spratu „%1$s“ nijedna soba ne obuhvata celu površinu stepenica, pa otvor u podu ne bi bio unutar sobe.</string>
+    <string name="stairs_issue_overlap">Preklapaju se sa drugim stepenicama koje kreću sa istog sprata.</string>
     <string name="stairs_advice_riser">Stepenici su viši od preporučenih %1$s cm.</string>
     <string name="stairs_advice_tread">Gazište je kraće od preporučenih %1$s cm. Produžite krak stepenica.</string>
     <string name="stairs_delete_title">Brisanje stepenica</string>
