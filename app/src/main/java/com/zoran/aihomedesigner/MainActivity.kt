@@ -432,7 +432,8 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 onMoveStairs = { id, x, y -> viewModel.moveStairs(id, x, y) },
                 onCreateDrawnRoom = { input, position, onResult ->
                     viewModel.createRoom(project.id, input, onResult, floorLevel = selectedFloor, position = position)
-                }
+                },
+                onUpdateRoom = { roomId, input, onResult -> viewModel.updateRoom(roomId, input, onResult) }
             )
         }
 

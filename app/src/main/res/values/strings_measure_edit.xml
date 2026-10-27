@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plan_measure_chip">%1$s m</string>
+    <string name="plan_measure_height">visina %1$s m</string>
+    <string name="plan_measure_hint">Dodirnite meru uz zid da je promenite.</string>
+    <string name="measure_title_length">Dužina sobe</string>
+    <string name="measure_title_width">Širina sobe</string>
+    <string name="measure_title_height">Visina zida</string>
+    <string name="measure_field">Nova mera (m)</string>
+    <string name="measure_range">Dozvoljeno od %1$s do %2$s m.</string>
+    <string name="measure_grow_length">Soba se širi ka istoku (udesno), a gornji levi ugao ostaje na mestu.</string>
+    <string name="measure_grow_width">Soba se širi ka jugu (nadole), a gornji levi ugao ostaje na mestu.</string>
+    <string name="measure_other_error">Druge mere ove sobe nisu u dozvoljenim granicama. Izmenite ih preko izmene sobe.</string>
+</resources>

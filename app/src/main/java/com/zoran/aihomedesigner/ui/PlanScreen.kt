@@ -9,6 +9,8 @@ import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -72,7 +74,10 @@ import com.zoran.aihomedesigner.domain.PlanValidator
 import com.zoran.aihomedesigner.data.RoomSaveResult
 import com.zoran.aihomedesigner.domain.DrawnRect
 import com.zoran.aihomedesigner.domain.RoomInput
+import com.zoran.aihomedesigner.domain.MeasureAnchor
+import com.zoran.aihomedesigner.domain.MeasureKind
 import com.zoran.aihomedesigner.domain.Room
+import com.zoran.aihomedesigner.domain.RoomMeasureEdit
 import com.zoran.aihomedesigner.domain.RoomDrawing
 import com.zoran.aihomedesigner.domain.RoomGeometry
 import com.zoran.aihomedesigner.domain.RoomGlueResult
@@ -124,6 +129,7 @@ fun PlanScreen(
     onMoveFurniture: (String, Double, Double, Int) -> Unit = { _, _, _, _ -> },
     onMoveStairs: (String, Double, Double) -> Unit = { _, _, _ -> },
     onCreateDrawnRoom: (RoomInput, PlanPoint, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
+    onUpdateRoom: (String, RoomInput, (RoomSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
     onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
     onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
@@ -139,6 +145,7 @@ fun PlanScreen(
     var dragPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
+    var measureEdit by remember { mutableStateOf<MeasureEdit?>(null) }
     var drawMode by remember { mutableStateOf(false) }
     var drawStartPoint by remember { mutableStateOf<PlanPoint?>(null) }
     var drawEndPoint by remember { mutableStateOf<PlanPoint?>(null) }
@@ -227,6 +234,7 @@ fun PlanScreen(
     val currentFloorLevel by rememberUpdatedState(floorLevel)
     val currentOnMoveStairs by rememberUpdatedState(onMoveStairs)
     val currentDrawMode by rememberUpdatedState(drawMode)
+    val currentSelectedId by rememberUpdatedState(selectedId)
     val currentOnMoveImage by rememberUpdatedState(onMovePlanImage)
     val currentPlanImage by rememberUpdatedState(planImage)
     val currentOnMove by rememberUpdatedState(onMoveRoom)
@@ -374,6 +382,19 @@ fun PlanScreen(
             onDone = { drawnRect = null },
             onCancel = { drawnRect = null }
         )
+    }
+
+    // Prozor za izmenu jedne mere sobe dodirnute na planu
+    measureEdit?.let { edit ->
+        displayRooms.firstOrNull { it.id == edit.roomId }?.let { room ->
+            RoomMeasureDialog(
+                room = room,
+                kind = edit.kind,
+                onSubmit = { input, onResult -> onUpdateRoom(room.id, input, onResult) },
+                onDone = { measureEdit = null },
+                onCancel = { measureEdit = null }
+            )
+        }
     }
 
     val gridColor = MaterialTheme.colorScheme.outlineVariant
@@ -567,6 +588,16 @@ fun PlanScreen(
                                         drawTooSmall = rect == null
                                     }
                                 } else if (!moved) {
+                                    // Dodir na meru uz zid izabrane sobe otvara izmenu te mere
+                                    val chipRoom = currentRooms.firstOrNull { it.id == currentSelectedId }
+                                    val chipHalfW = max(MeasureChipWidth.toPx(), 48.dp.toPx()) / 2f
+                                    val chipHalfH = max(MeasureChipHeight.toPx(), 48.dp.toPx()) / 2f
+                                    val tappedChip = chipRoom?.let { r ->
+                                        RoomMeasureEdit.anchors(r).firstOrNull { a ->
+                                            abs(startPos.x - (startOffset.x + (a.xM * startScale).toFloat())) <= chipHalfW &&
+                                                abs(startPos.y - (startOffset.y + (a.yM * startScale).toFloat())) <= chipHalfH
+                                        }
+                                    }
                                     val hitFurniture = currentFurniture.lastOrNull { item ->
                                         val itemRoom = currentRooms.firstOrNull { it.id == item.roomId }
                                             ?: return@lastOrNull false
@@ -577,7 +608,9 @@ fun PlanScreen(
                                             startPos.y >= top &&
                                             startPos.y <= top + item.footprintWidthM * startScale
                                     }
-                                    if (hitFurniture != null) {
+                                    if (tappedChip != null && chipRoom != null) {
+                                        measureEdit = MeasureEdit(chipRoom.id, tappedChip.kind)
+                                    } else if (hitFurniture != null) {
                                         selectedFurnitureId = hitFurniture.id
                                         selectedId = null
                                     } else {
@@ -772,6 +805,15 @@ fun PlanScreen(
                     )
                 }
 
+                // Mere izabrane sobe uz zidove: dodir na meru je izmena (obrađuje se u gestu iznad)
+                if (!drawMode) {
+                    selectedRoom?.let { room ->
+                        RoomMeasureEdit.anchors(room).forEach { anchor ->
+                            MeasureChip(anchor, room, scale, offset)
+                        }
+                    }
+                }
+
                 // Strane sveta uz ivice prikaza, izvan crteža kuće ili stana.
                 CompassLabel(
                     text = stringResource(R.string.compass_north),
@@ -792,6 +834,12 @@ fun PlanScreen(
             }
 
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                if (selectedRoom != null && !drawMode) {
+                    Text(
+                        text = stringResource(R.string.plan_measure_hint),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 if (planImage != null) {
                     TextButton(onClick = {
                         drawMode = !drawMode
@@ -1436,6 +1484,44 @@ private fun CompassLabel(text: String, modifier: Modifier = Modifier) {
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
             .padding(horizontal = 6.dp, vertical = 2.dp)
     )
+}
+
+private val MeasureChipWidth = 88.dp
+private val MeasureChipHeight = 32.dp
+
+/** Stanje izmene jedne mere sobe: koja soba i koja mera. */
+private data class MeasureEdit(val roomId: String, val kind: MeasureKind)
+
+/**
+ * Natpis sa merom uz zid izabrane sobe. Samo se crta: dodir se prepoznaje u gestu plana, da dodir na meru
+ * ne bi izabrao ili ukinuo izbor sobe.
+ */
+@Composable
+private fun MeasureChip(anchor: MeasureAnchor, room: Room, scale: Float, offset: Offset) {
+    val density = LocalDensity.current
+    val halfW = with(density) { MeasureChipWidth.toPx() } / 2f
+    val halfH = with(density) { MeasureChipHeight.toPx() } / 2f
+    val value = RoomMeasureEdit.valueOf(room, anchor.kind)
+    val text = if (anchor.kind == MeasureKind.HEIGHT) {
+        stringResource(R.string.plan_measure_height, formatMeters(value))
+    } else {
+        stringResource(R.string.plan_measure_chip, formatMeters(value))
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (offset.x + (anchor.xM * scale).toFloat() - halfW).roundToInt(),
+                    (offset.y + (anchor.yM * scale).toFloat() - halfH).roundToInt()
+                )
+            }
+            .size(MeasureChipWidth, MeasureChipHeight)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+    ) {
+        Text(text = text, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+    }
 }
 
 /** Poruka ispod dugmadi za zaključavanje i lepljenje sobe. */
