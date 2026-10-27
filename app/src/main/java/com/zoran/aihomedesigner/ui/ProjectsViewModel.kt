@@ -70,7 +70,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
 
     /**
      * Pokreće upis u bazu. Ako upis ne uspe, aplikacija se ne zatvara, nego se javlja [saveFailed].
-     * Važi za brisanja i pomeranja. Forme (nova i izmenjena soba, vrata, nameštaj, projekat) ovo još ne koriste.
+     * Važi za brisanja i pomeranja.
      */
     private fun launchWrite(block: suspend () -> Unit) {
         viewModelScope.launch {
@@ -82,6 +82,26 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
                 Log.e("ProjectsViewModel", "Upis u bazu nije uspeo", e)
                 _saveFailed.value = true
             }
+        }
+    }
+
+    /**
+     * Upis iz forme (soba, vrata, nameštaj, stepenice). Ako upis ne uspe, javlja se [saveFailed],
+     * a formi se vraća [fallback] (rezultat "ne postoji") da se zatvori i ne ostane zaključana.
+     * Poruka na ekranu jasno kaže da promena nije sačuvana.
+     */
+    private fun <T> launchSave(onResult: (T) -> Unit, fallback: T, block: suspend () -> T) {
+        viewModelScope.launch {
+            val result = try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("ProjectsViewModel", "Upis iz forme nije uspeo", e)
+                _saveFailed.value = true
+                fallback
+            }
+            onResult(result)
         }
     }
 
@@ -111,8 +131,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         onResult: (RoomSaveResult) -> Unit,
         floorLevel: Int = 0
     ) {
-        viewModelScope.launch {
-            onResult(roomRepository.createRoom(projectId, input, floorLevel = floorLevel))
+        launchSave<RoomSaveResult>(onResult, RoomSaveResult.NotFound) {
+            roomRepository.createRoom(projectId, input, floorLevel = floorLevel)
         }
     }
 
@@ -121,8 +141,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         input: RoomInput,
         onResult: (RoomSaveResult) -> Unit
     ) {
-        viewModelScope.launch {
-            onResult(roomRepository.updateRoom(roomId, input))
+        launchSave<RoomSaveResult>(onResult, RoomSaveResult.NotFound) {
+            roomRepository.updateRoom(roomId, input)
         }
     }
 
@@ -180,8 +200,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         input: OpeningInput,
         onResult: (OpeningSaveResult) -> Unit
     ) {
-        viewModelScope.launch {
-            onResult(openingRepository.createOpening(roomId, input))
+        launchSave<OpeningSaveResult>(onResult, OpeningSaveResult.NotFound) {
+            openingRepository.createOpening(roomId, input)
         }
     }
 
@@ -190,8 +210,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         input: OpeningInput,
         onResult: (OpeningSaveResult) -> Unit
     ) {
-        viewModelScope.launch {
-            onResult(openingRepository.updateOpening(openingId, input))
+        launchSave<OpeningSaveResult>(onResult, OpeningSaveResult.NotFound) {
+            openingRepository.updateOpening(openingId, input)
         }
     }
 
@@ -212,8 +232,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         input: FurnitureInput,
         onResult: (FurnitureSaveResult) -> Unit
     ) {
-        viewModelScope.launch {
-            onResult(furnitureRepository.createFurniture(roomId, input))
+        launchSave<FurnitureSaveResult>(onResult, FurnitureSaveResult.NotFound) {
+            furnitureRepository.createFurniture(roomId, input)
         }
     }
 
@@ -222,8 +242,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         input: FurnitureInput,
         onResult: (FurnitureSaveResult) -> Unit
     ) {
-        viewModelScope.launch {
-            onResult(furnitureRepository.updateFurniture(furnitureId, input))
+        launchSave<FurnitureSaveResult>(onResult, FurnitureSaveResult.NotFound) {
+            furnitureRepository.updateFurniture(furnitureId, input)
         }
     }
 
@@ -249,14 +269,14 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         yM: Double,
         onResult: (StairsSaveResult) -> Unit
     ) {
-        viewModelScope.launch {
-            onResult(stairsRepository.createStairs(projectId, input, xM, yM))
+        launchSave<StairsSaveResult>(onResult, StairsSaveResult.NotFound) {
+            stairsRepository.createStairs(projectId, input, xM, yM)
         }
     }
 
     fun updateStairs(stairsId: String, input: StairsInput, onResult: (StairsSaveResult) -> Unit) {
-        viewModelScope.launch {
-            onResult(stairsRepository.updateStairs(stairsId, input))
+        launchSave<StairsSaveResult>(onResult, StairsSaveResult.NotFound) {
+            stairsRepository.updateStairs(stairsId, input)
         }
     }
 

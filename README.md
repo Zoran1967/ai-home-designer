@@ -51,7 +51,7 @@ Sve mere u modelu su u metrima. Opis koordinatnog sistema je u `docs/koordinatni
 ## Poznata ograničenja
 
 - Sobe su pravougaone, a stepenice su samo prave.
-- Ako upis u bazu ne uspe (na primer, pun telefon), poruka se prikazuje za brisanja i pomeranja. Forme (novi i izmenjeni projekat, soba, vrata, nameštaj) još nemaju tu poruku.
+- Ako upis u bazu ne uspe (na primer, pun telefon), poruka se prikazuje za brisanja, pomeranja i forme (soba, vrata, nameštaj, stepenice); forma se tada zatvori, a uneti podaci se gube. Novi projekat i kalibracija slike još nemaju tu poruku.
 - Prikazi (plan, 3D) i gestovi se proveravaju ručno na telefonu. Automatski se testira logika (mere, provere, geometrija, projekcija).
 - 3D prikaz je jednostavan: bez tekstura i senki. Kvadri se crtaju od daljih ka bližim, što je pouzdano za sobe i nameštaj, ali nije potpuno skrivanje površina, pa su retki složeni slučajevi mogući.
 - Položaj soba na planu je raspored koji bira korisnik i nije izmeren.
