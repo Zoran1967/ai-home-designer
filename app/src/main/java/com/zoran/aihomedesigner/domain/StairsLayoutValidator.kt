@@ -45,6 +45,10 @@ object StairsLayoutValidator {
         return issues
     }
 
+    /** Identifikatori stepenica kod kojih provera položaja ([validate]) nalazi bar jedan problem. */
+    fun idsWithIssues(allStairs: List<Stairs>, rooms: List<Room>): Set<String> =
+        allStairs.filter { validate(it, allStairs, rooms).isNotEmpty() }.map { it.id }.toSet()
+
     /** Površina je unutar sobe (unutrašnjost sobe, uz toleranciju [RoomGeometry.EPSILON_M]). */
     private fun contains(room: Room, f: StairsFootprint): Boolean {
         val eps = RoomGeometry.EPSILON_M

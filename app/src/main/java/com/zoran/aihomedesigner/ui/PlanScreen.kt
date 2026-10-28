@@ -100,6 +100,7 @@ import com.zoran.aihomedesigner.domain.SharedWall
 import com.zoran.aihomedesigner.domain.SharedWalls
 import com.zoran.aihomedesigner.domain.Stairs
 import com.zoran.aihomedesigner.domain.StairsGeometry
+import com.zoran.aihomedesigner.domain.StairsLayoutValidator
 import com.zoran.aihomedesigner.domain.StairsOnPlan
 import com.zoran.aihomedesigner.domain.StairsPlanning
 import com.zoran.aihomedesigner.domain.StairsRole
@@ -803,6 +804,11 @@ fun PlanScreen(
                     )
                 }
 
+                // Stepenice sa problemom u položaju (van sobe, preklapanje) crtaju se crveno, i dok se prevlače
+                val stairsWithIssues = remember(displayStairs, allRooms) {
+                    StairsLayoutValidator.idsWithIssues(displayStairs, allRooms)
+                }
+
                 // Stepenice sa ovog sprata (pune linije) i one koje stižu na ovaj sprat (isprekidane)
                 displayStairs.forEach { item ->
                     val role = StairsOnPlan.role(item, floorLevel) ?: return@forEach
@@ -811,7 +817,8 @@ fun PlanScreen(
                         role = role,
                         stepCount = StairsGeometry.stepCount(StairsPlanning.riseM(allRooms, item.lowerLevel)),
                         scale = scale,
-                        offset = offset
+                        offset = offset,
+                        hasIssue = item.id in stairsWithIssues
                     )
                 }
 
@@ -1401,7 +1408,8 @@ private fun PlanStairs(
     role: StairsRole,
     stepCount: Int,
     scale: Float,
-    offset: Offset
+    offset: Offset,
+    hasIssue: Boolean
 ) {
     val density = LocalDensity.current
     val left = (offset.x + stairs.xM * scale).roundToInt()
@@ -1410,15 +1418,18 @@ private fun PlanStairs(
     val heightPx = (stairs.footprintWidthM * scale).toFloat()
 
     val colors = MaterialTheme.colorScheme
-    val lineColor = colors.secondary
-    val fillColor = colors.secondaryContainer.copy(alpha = if (role == StairsRole.DEPARTS) 0.7f else 0.35f)
+    val lineColor = if (hasIssue) colors.error else colors.secondary
+    val fillColor = (if (hasIssue) colors.errorContainer else colors.secondaryContainer)
+        .copy(alpha = if (role == StairsRole.DEPARTS) 0.7f else 0.35f)
     val lines = remember(stairs, stepCount) { StairsOnPlan.stepLines(stairs, stepCount) }
     val arrow = remember(stairs) { StairsOnPlan.climbArrow(stairs) }
-    val label = if (role == StairsRole.DEPARTS) {
+    val baseLabel = if (role == StairsRole.DEPARTS) {
         stringResource(R.string.plan_stairs_up, floorLabel(stairs.upperLevel))
     } else {
         stringResource(R.string.plan_stairs_from, floorLabel(stairs.lowerLevel))
     }
+    // Uz boju i znak, da se problem vidi i bez razlikovanja boja
+    val label = if (hasIssue) "! $baseLabel" else baseLabel
 
     Box(
         modifier = Modifier
