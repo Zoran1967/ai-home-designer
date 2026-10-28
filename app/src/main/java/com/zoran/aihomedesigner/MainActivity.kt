@@ -422,6 +422,14 @@ private fun AppRoot(viewModel: ProjectsViewModel = viewModel()) {
                 planImage = planImage,
                 planBitmap = planBitmap,
                 onMovePlanImage = { x, y -> selectedProjectId?.let { viewModel.movePlanImage(it, x, y) } },
+                onRescaleImage = { factor, anchor, onResult ->
+                    val id = selectedProjectId
+                    if (id == null) {
+                        onResult(false)
+                    } else {
+                        viewModel.rescalePlanImage(id, factor, anchor.xM, anchor.yM, onResult)
+                    }
+                },
                 onBack = { screen = Screen.ROOMS },
                 onMoveRoom = { id, x, y -> viewModel.moveRoom(id, x, y) },
                 onSetRoomLocked = { id, locked -> viewModel.setRoomLocked(id, locked) },

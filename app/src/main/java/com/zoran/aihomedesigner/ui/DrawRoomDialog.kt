@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +27,7 @@ import com.zoran.aihomedesigner.data.RoomSaveResult
 import com.zoran.aihomedesigner.domain.DimensionLimits
 import com.zoran.aihomedesigner.domain.DrawAxis
 import com.zoran.aihomedesigner.domain.DrawnRect
+import com.zoran.aihomedesigner.domain.ImageRescale
 import com.zoran.aihomedesigner.domain.MeasureParse
 import com.zoran.aihomedesigner.domain.MeasureParser
 import com.zoran.aihomedesigner.domain.RoomDrawing
@@ -41,9 +43,14 @@ import com.zoran.aihomedesigner.domain.RoomInputErrors
 fun DrawRoomDialog(
     rect: DrawnRect,
     onSubmit: (RoomInput, (RoomSaveResult) -> Unit) -> Unit,
+    onRescale: (Double, (Boolean) -> Unit) -> Unit,
     onDone: () -> Unit,
     onCancel: () -> Unit
 ) {
+    // Mere sa slike; posle podešavanja razmere slike one se skaliraju faktorom
+    var currentRect by remember(rect) { mutableStateOf(rect) }
+    // 0 = nije pokušano, 1 = razmera podešena, 2 = podešavanje odbijeno
+    var rescaleState by remember { mutableStateOf(0) }
     var name by rememberSaveable { mutableStateOf("") }
     var length by rememberSaveable { mutableStateOf(metersToInputText(rect.lengthM)) }
     var width by rememberSaveable { mutableStateOf(metersToInputText(rect.widthM)) }
@@ -55,7 +62,7 @@ fun DrawRoomDialog(
         MeasureParser.parse(text, DimensionLimits.MIN_LENGTH_M, DimensionLimits.MAX_LENGTH_M) as? MeasureParse.Value
         )?.meters
 
-    val mismatches = RoomDrawing.mismatches(rect, typed(length), typed(width))
+    val mismatches = RoomDrawing.mismatches(currentRect, typed(length), typed(width))
 
     AlertDialog(
         onDismissRequest = { if (!saving) onCancel() },
@@ -117,6 +124,7 @@ fun DrawRoomDialog(
                     decimal = true
                 )
                 mismatches.forEach { mismatch ->
+                    val factor = ImageRescale.factor(mismatch.drawnM, mismatch.typedM)
                     Text(
                         text = stringResource(
                             if (mismatch.axis == DrawAxis.LENGTH) {
@@ -127,6 +135,54 @@ fun DrawRoomDialog(
                             formatMeters(mismatch.drawnM),
                             formatMeters(mismatch.typedM)
                         ),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    if (factor != null) {
+                        OutlinedButton(
+                            onClick = {
+                                onRescale(factor) { ok ->
+                                    if (ok) {
+                                        currentRect = ImageRescale.scaleRect(currentRect, factor)
+                                        rescaleState = 1
+                                    } else {
+                                        rescaleState = 2
+                                    }
+                                }
+                            },
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text(
+                                stringResource(
+                                    if (mismatch.axis == DrawAxis.LENGTH) {
+                                        R.string.draw_room_rescale_length
+                                    } else {
+                                        R.string.draw_room_rescale_width
+                                    },
+                                    formatMeters(mismatch.typedM)
+                                )
+                            )
+                        }
+                    }
+                }
+                if (mismatches.any { ImageRescale.factor(it.drawnM, it.typedM) != null }) {
+                    Text(
+                        text = stringResource(R.string.draw_room_rescale_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                if (rescaleState == 1) {
+                    Text(
+                        text = stringResource(R.string.draw_room_rescale_done),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                if (rescaleState == 2) {
+                    Text(
+                        text = stringResource(R.string.draw_room_rescale_failed),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp)

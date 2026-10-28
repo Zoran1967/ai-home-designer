@@ -146,6 +146,7 @@ fun PlanScreen(
     onUpdateOpening: (String, OpeningInput, (OpeningSaveResult) -> Unit) -> Unit = { _, _, _ -> },
     onDeleteOpening: (String) -> Unit = {},
     onMovePlanImage: (Double, Double) -> Unit = { _, _ -> },
+    onRescaleImage: (Double, PlanPoint, (Boolean) -> Unit) -> Unit = { _, _, onResult -> onResult(false) },
     onSetRoomLocked: (String, Boolean) -> Unit = { _, _ -> },
     onGlueRoom: (String, (RoomGlueResult) -> Unit) -> Unit = { _, _ -> },
     onUnglueRoom: (String) -> Unit = {}
@@ -402,6 +403,7 @@ fun PlanScreen(
         DrawRoomDialog(
             rect = rect,
             onSubmit = { input, onResult -> onCreateDrawnRoom(input, PlanPoint(rect.xM, rect.yM), onResult) },
+            onRescale = { factor, onResult -> onRescaleImage(factor, PlanPoint(rect.xM, rect.yM), onResult) },
             onDone = { drawnRect = null },
             onCancel = { drawnRect = null }
         )
@@ -702,7 +704,10 @@ fun PlanScreen(
                                             startPos.y >= top &&
                                             startPos.y <= top + item.footprintWidthM * startScale
                                     }
-                                    if (pickingWall) {
+                                    if (pickingWall && tappedOpening != null) {
+                                        // I u režimu dodavanja, dodir na postojeća vrata ili prozor otvara radnje nad njima
+                                        openingActionId = tappedOpening.id
+                                    } else if (pickingWall) {
                                         val tapXm = ((startPos.x - startOffset.x) / startScale).toDouble()
                                         val tapYm = ((startPos.y - startOffset.y) / startScale).toDouble()
                                         val tolM = (24.dp.toPx() / startScale).toDouble()

@@ -14,4 +14,9 @@
     <string name="draw_room_hint_height">Obavezno, na primer 2,6</string>
     <string name="draw_room_mismatch_length">Po slici je dužina oko %1$s m, a upisali ste %2$s m. Proverite meru ili kalibraciju slike.</string>
     <string name="draw_room_mismatch_width">Po slici je širina oko %1$s m, a upisali ste %2$s m. Proverite meru ili kalibraciju slike.</string>
+    <string name="draw_room_rescale_length">Podesi razmeru slike po dužini (%1$s m)</string>
+    <string name="draw_room_rescale_width">Podesi razmeru slike po širini (%1$s m)</string>
+    <string name="draw_room_rescale_note">Podešavanje menja razmeru cele slike, oko gornjeg levog ugla ove sobe. Sobe koje ste ranije crtali preko ove slike možda više neće stajati na njoj.</string>
+    <string name="draw_room_rescale_done">Razmera slike je podešena prema upisanoj meri.</string>
+    <string name="draw_room_rescale_failed">Razmera slike nije promenjena, jer bi slika dobila nerealnu veličinu.</string>
 </resources>

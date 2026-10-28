@@ -334,6 +334,19 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Menja razmeru slike plana (faktor i tačka oko koje se skalira). [onResult] javlja da li je promena prihvaćena. */
+    fun rescalePlanImage(
+        projectId: String,
+        factor: Double,
+        anchorXM: Double,
+        anchorYM: Double,
+        onResult: (Boolean) -> Unit
+    ) {
+        launchWrite {
+            onResult(planImageRepository.rescaleImage(projectId, factor, anchorXM, anchorYM))
+        }
+    }
+
     fun movePlanImage(projectId: String, xM: Double, yM: Double) {
         launchWrite {
             planImageRepository.moveImage(projectId, xM, yM)

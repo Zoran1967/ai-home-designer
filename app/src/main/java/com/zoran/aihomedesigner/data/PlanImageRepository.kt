@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import com.zoran.aihomedesigner.domain.DimensionSource
+import com.zoran.aihomedesigner.domain.ImageRescale
 import com.zoran.aihomedesigner.domain.ImageSampling
 import com.zoran.aihomedesigner.domain.PdfSizing
 import com.zoran.aihomedesigner.domain.PlanImage
@@ -134,6 +135,19 @@ class PlanImageRepository(
         )
         if (old != null && old.fileName != image.fileName) deleteFile(old.fileName)
     }
+
+    /**
+     * Menja razmeru slike plana: razmera se množi faktorom [factor], a slika se skalira oko tačke
+     * ([anchorXM], [anchorYM]) plana. Vraća false ako slike nema ili bi rezultat bio nerealan
+     * (vidi [ImageRescale.apply]); tada se ništa ne menja.
+     */
+    suspend fun rescaleImage(projectId: String, factor: Double, anchorXM: Double, anchorYM: Double): Boolean =
+        withContext(Dispatchers.IO) {
+            val current = dao.getByProject(projectId)?.toDomainOrNull() ?: return@withContext false
+            val updated = ImageRescale.apply(current, factor, anchorXM, anchorYM) ?: return@withContext false
+            dao.upsert(updated.toEntity())
+            true
+        }
 
     /** Briše kopiju slike koja nije kalibrisana (npr. korisnik je odustao). */
     suspend fun discard(image: ImportedImage) = withContext(Dispatchers.IO) { deleteFile(image.fileName) }
