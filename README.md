@@ -8,23 +8,24 @@ Najvažniji zahtev je tačnost mera. Model nekretnine je izvor istine, a slike k
 
 - **Projekti** (stan ili kuća) sa trajnim čuvanjem na telefonu.
 - **Sobe**: pravougaone, sa unutrašnjom dužinom i širinom, visinom zida i debljinom zida (opciono). Mere su u metrima, a svaka ima oznaku izvora (npr. "upisao korisnik").
-- **2D plan**: sobe u razmeri, prevlačenje prstom i strelicama, zumiranje, strane sveta (sever je gore na planu), zidovi između susednih soba i dugme za priljubljivanje sobe uz susednu.
+- **2D plan**: sobe u razmeri, prevlačenje prstom i strelicama, zumiranje, strane sveta (sever je gore na planu), zidovi između susednih soba i dugme za priljubljivanje sobe uz susednu. Donji panel sa dugmadi zauzima najviše 38% ekrana i lista se, a dugme **Sakrij/Opcije** ga skriva da plan zauzme ceo ekran.
+- **Uređivanje direktno na planu**: dodirom na meru uz zid izabrane sobe menja se dužina, širina ili visina zida (soba se širi udesno i nadole, gornji levi ugao ostaje); dugme **Dodaj vrata ili prozor** dodaje otvor dodirom na zid (zid i položaj se računaju iz mesta dodira); dodir na postojeća vrata ili prozor otvara radnje (okretanje otvaranja, šarke, izmena, brisanje).
 - **Spratovi**: prizemlje, spratovi i podrumi. Svaki sprat ima svoj plan, a ime sobe mora da bude jedinstveno samo na istom spratu. Sobu je moguće prebaciti na drugi sprat (mere, vrata, prozori i nameštaj idu sa njom, a ona dobija novo mesto na planu tog sprata).
 - **Zaključavanje i lepljenje soba** na planu: zaključana soba se ne pomera slučajno, a zalepljene sobe istog sprata se pomeraju zajedno.
-- **Stepenice**: prave stepenice između dva sprata (unos mera, smera penjanja i sprata, provera unosa i savet o visini i dubini stepenika). Crtaju se na planu, u 3D prikazu i u izvozu plana. Visina uspona i broj stepenika su procena iz visine soba, a ne izmerena vrednost.
+- **Stepenice**: prave stepenice između dva sprata (unos mera, smera penjanja i sprata, provera unosa i savet o visini i dubini stepenika). Prevlače se prstom na planu. Provera položaja kaže da li su cele unutar jedne sobe na donjem i na gornjem spratu i da li se preklapaju sa drugim stepenicama; ne proverava prolaz kroz vrata ni visinu iznad glave. Crtaju se na planu, u 3D prikazu i u izvozu plana. Visina uspona i broj stepenika su procena iz visine soba, a ne izmerena vrednost.
 - **AI ilustracija** (opciono): iz plana se pravi tekstualni opis koji se šalje Google Gemini servisu za slike, uz ključ koji korisnik sam unese u aplikaciji. Slika je samo ilustracija, ne čuva se i ne menja mere. Aplikacija ima pravo na internet samo zbog ovog ekrana.
 - **Provera plana**: preklapanje soba i debljina zida između susednih soba.
 - **Vrata i prozori** na zidovima soba, sa položajem, merama, smerom otvaranja i stranom šarki. Luk otvaranja vrata se crta na planu.
 - **Nameštaj** sa pravim merama i okretanjem, prevlačenje na planu. Provera: izlazi iz sobe, previsok je, preklapanje, blokira vrata. Uz to preporuke o uskim prolazima (manje od 60 cm između predmeta ili do zida), koje nisu greške.
 - **3D prikaz** cele nekretnine sa svim spratovima jedan iznad drugog, okretanje i zumiranje prstom. Crta se iz istih podataka kao plan.
-- **Uvoz plana sa slike**: slika iz galerije kao podloga ispod plana. Razmera se određuje kalibracijom (dve tačke i poznato rastojanje) i vodi se kao "uvezeno i kalibrisano", a ne kao izmereno. Sliku je moguće pomerati.
+- **Uvoz plana sa slike ili iz PDF-a**: slika iz galerije ili jedna strana PDF-a (kod PDF-a sa više strana korisnik bira stranu) kao podloga ispod plana. Razmera se određuje kalibracijom (dve tačke i poznato rastojanje) i vodi se kao "uvezeno i kalibrisano", a ne kao izmereno. Sliku je moguće pomerati. Preko slike se soba crta prevlačenjem pravougaonika (**Nacrtaj sobu na slici**): dužina i širina se predlažu sa slike, a visinu i ime upisuje korisnik. Upisana mera je mera sobe, a ako se razlikuje od slike za više od 10%, aplikacija samo upozori.
 - **Izvoz plana** izabranog sprata u sliku (PNG) ili PDF i deljenje, sa lenjirom razmere i napomenom da raspored soba nije izmeren.
 
 Svaka provera tvrdi samo ono što stvarno proverava, a aplikacija to ispisuje.
 
 ## Šta još ne radi
 
-Uvoz svih strana PDF-a (uvozi se samo prva), automatsko prepoznavanje zidova sa slike, skeniranje prostorije, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
+Automatsko prepoznavanje zidova sa slike, automatska kalibracija slike iz nacrtane sobe, skeniranje prostorije, druge vrste stepenica osim pravih, sobe koje nisu pravougaone, više jezika osim srpskog.
 
 ## Kako se gradi i pokreće (bez računara)
 

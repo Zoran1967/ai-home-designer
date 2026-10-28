@@ -43,12 +43,19 @@ Korisnik ponekad nastavlja u novom razgovoru kad dostigne ograničenje, pa repo 
 
 ## Struktura koda (`app/src/main/java/com/zoran/aihomedesigner`)
 
-- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), zaključavanje i lepljenje soba (`RoomGroups`), stepenice (`Stairs`, `StairsValidator`, `StairsGeometry`, `StairsPlanning`, `StairsOnPlan`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`; `PdfSizing.kt`: veličina slike iz strane PDF-a), prebacivanje sobe na drugi sprat (`FloorMove`), razmeštaj izvoza (`PlanExportLayout`), opis prostora za AI (`AiPrompt`), zahtev i odgovor Gemini API-ja (`GeminiApi`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`, `DepthOrder.kt`: redosled crtanja kvadara).
+- `domain/`: čista logika bez Androida (lako se testira): `Project`, `Room`, `Opening`, `Furniture`, provere unosa (`*Validator`), geometrija (`RoomGeometry`, `SharedWalls`, `PlanValidator`, `WallSnapping`, `DoorSwingGeometry`, `FurnitureGeometry`, `FurnitureLayoutValidator`, `FurniturePlacement`, `FurniturePassages`), spratovi (`Floors` u `Room.kt`), zaključavanje i lepljenje soba (`RoomGroups`), stepenice (`Stairs`, `StairsValidator`, `StairsGeometry`, `StairsPlanning`, `StairsOnPlan`), slika plana i kalibracija (`PlanImage.kt`: `Calibration`; `PdfSizing.kt`: veličina slike iz strane PDF-a), prebacivanje sobe na drugi sprat (`FloorMove`), crtanje sobe preko slike (`RoomDrawing`), izmena jedne mere sobe (`RoomMeasureEdit`), izbor zida dodirom (`WallPicking`), izbor strane PDF-a (`PdfPageChoice`), provera položaja stepenica (`StairsLayoutValidator`), razmeštaj izvoza (`PlanExportLayout`), opis prostora za AI (`AiPrompt`), zahtev i odgovor Gemini API-ja (`GeminiApi`) i 3D (`Scene3D.kt`: `SceneBuilder` sa spratovima, `Camera3D.kt`: `Projection`, `DepthOrder.kt`: redosled crtanja kvadara).
 - `data/`: Room baza (`AppDatabase`, `*Entity`, `*Dao`, `*Mapper`, `*Repository`).
 - `export/`: crtanje plana u PNG i PDF (`PlanRenderer`, `PlanExporter`) i deljenje preko `FileProvider`-a (podešen u `AndroidManifest.xml` i `res/xml/file_paths.xml`).
 - `ai/`: ključ i ime modela za AI ilustraciju (`AiSettings`, u `noBackupFilesDir`, bez šifrovanja) i HTTPS poziv Gemini API-ja bez dodatnih biblioteka (`GeminiClient`). Logika opisa i čitanja odgovora je u `domain/`.
 - `ui/`: ekrani i `ProjectsViewModel`. Navigacija je u `MainActivity.kt` (enum `Screen`, bez biblioteke za navigaciju).
 - Koordinatni sistem: `docs/koordinatni-sistem.md`. Nameštaj se meri od gornjeg levog ugla sobe, a sobe od početka plana.
+
+## Plan (`ui/PlanScreen.kt`): pravila za gestove i režime
+
+- Režimi **crtanje sobe**, **dodavanje vrata ili prozora** i **pomeranje slike** se međusobno isključuju. U režimu crtanja i dodavanja prevlačenje ne pomera sobe, nameštaj ni stepenice, nego samo prikaz.
+- Prednost pri prevlačenju: nameštaj, pa stepenice, pa soba. Dodir (bez pomeranja): mera uz zid izabrane sobe, pa vrata ili prozor, pa nameštaj, pa soba. U režimu dodavanja dodir na postojeći otvor ipak otvara njegove radnje, a dodir na zid dodaje novi.
+- Dodir na meru uz zid i na otvor prepoznaje sam gest plana (`pointerInput`), a ne dugme ili `clickable`, da dodir ne bi ukinuo izbor sobe pre nego što se prozor otvori. Prozor sa formom otvora se prikazuje kao `Dialog` preko plana, da plan zadrži zumiranje.
+- Donji panel je ograničen na 38% visine ekrana i lista se. Novo dugme ili tekst ne sme da pravi panel višim od toga, jer crtež inače ostane bez mesta. Uputstva za aktivni režim idu na sam crtež, ne u panel.
 
 ## Baza
 
@@ -74,7 +81,7 @@ Mere i unos, provere plana, vrata, nameštaj i prolazi, spratovi i prebacivanje 
 5. Geometrijska provera i povezane sobe, vrata i prozori (gotovo).
 6. Nameštaj i provera sudara (gotovo).
 7. Interaktivni 3D prikaz (gotovo, jednostavan).
-8. Uvoz plana i kalibracija razmere (gotovo za slike i prvu stranu PDF-a; ostale strane PDF-a i automatsko prepoznavanje zidova nisu urađeni).
+8. Uvoz plana i kalibracija razmere (gotovo za slike i PDF sa izborom strane; automatsko prepoznavanje zidova i automatska kalibracija iz nacrtane sobe nisu urađeni).
 9. Stepenice i raspored soba: unos, provera i savet o udobnosti su gotovi; zaključavanje i lepljenje soba na planu su gotovi. Stepenice se crtaju na 2D planu (`PlanScreen`), u 3D prikazu (`SceneBuilder.stairsBoxes`) i u izvozu plana (`PlanRenderer`, `PlanStairsLayer`); broj stepenika je procena iz visine soba, a pod sprata iznad ima otvor preko stepenica (`FloorCutouts` u `Scene3D.kt`). Geometrija crtanja je u `StairsOnPlan.kt`.
 10. AI ilustracija (`AiVisualScreen`): korisnik sam unosi svoj Gemini API ključ u aplikaciji. Ključ nikad nije u kodu ni u repou, a šalje se samo tekstualni opis iz modela. Slika je samo ilustracija, ne čuva se i ne menja mere. Aplikacija traži pravo `INTERNET` samo zbog ovog ekrana.
 11. Skeniranje i napredne funkcije.
