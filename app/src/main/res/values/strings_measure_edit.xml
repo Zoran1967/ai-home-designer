@@ -11,4 +11,6 @@
     <string name="measure_grow_length">Soba se širi ka istoku (udesno), a gornji levi ugao ostaje na mestu.</string>
     <string name="measure_grow_width">Soba se širi ka jugu (nadole), a gornji levi ugao ostaje na mestu.</string>
     <string name="measure_other_error">Druge mere ove sobe nisu u dozvoljenim granicama. Izmenite ih preko izmene sobe.</string>
+    <string name="plan_measures_show">Prikaži mere svih soba</string>
+    <string name="plan_measures_hide">Sakrij mere soba</string>
 </resources>

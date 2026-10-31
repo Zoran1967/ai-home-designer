@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -163,6 +164,7 @@ fun PlanScreen(
     var dragFurnitureId by remember { mutableStateOf<String?>(null) }
     var dragFurniturePoint by remember { mutableStateOf<PlanPoint?>(null) }
     var panelVisible by remember { mutableStateOf(true) }
+    var showAllMeasures by remember { mutableStateOf(false) }
     var openingActionId by remember { mutableStateOf<String?>(null) }
     var openingEditId by remember { mutableStateOf<String?>(null) }
     var openingMode by remember { mutableStateOf(false) }
@@ -920,6 +922,28 @@ fun PlanScreen(
                     )
                 }
 
+                // Mere svih soba (samo prikaz): dužina uz gornji zid i širina uz levi zid, unutar sobe.
+                // Izabrana soba ima svoje mere koje se dodirom menjaju. Mala soba na malom zumu nema natpise.
+                if (showAllMeasures) {
+                    displayRooms.forEach { room ->
+                        if (room.id != selectedId && room.lengthM * scale > 160f && room.widthM * scale > 80f) {
+                            RoomMeasureEdit.anchors(room).forEach { anchor ->
+                                when (anchor.kind) {
+                                    MeasureKind.LENGTH -> MeasureText(
+                                        text = stringResource(R.string.plan_measure_chip, formatMeters(room.lengthM)),
+                                        anchor = anchor, scale = scale, offset = offset, shiftX = 0.dp, shiftY = 12.dp
+                                    )
+                                    MeasureKind.WIDTH -> MeasureText(
+                                        text = stringResource(R.string.plan_measure_chip, formatMeters(room.widthM)),
+                                        anchor = anchor, scale = scale, offset = offset, shiftX = 30.dp, shiftY = 0.dp
+                                    )
+                                    MeasureKind.HEIGHT -> Unit
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Mere izabrane sobe uz zidove: dodir na meru je izmena (obrađuje se u gestu iznad)
                 if (!drawMode && !openingMode) {
                     selectedRoom?.let { room ->
@@ -989,6 +1013,13 @@ fun PlanScreen(
                     Text(
                         text = stringResource(R.string.plan_openings_hint),
                         style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                TextButton(onClick = { showAllMeasures = !showAllMeasures }) {
+                    Text(
+                        stringResource(
+                            if (showAllMeasures) R.string.plan_measures_hide else R.string.plan_measures_show
+                        )
                     )
                 }
                 TextButton(onClick = {
@@ -1654,6 +1685,37 @@ private fun CompassLabel(text: String, modifier: Modifier = Modifier) {
 
 private val MeasureChipWidth = 88.dp
 private val MeasureChipHeight = 32.dp
+
+/** Mala mera sobe samo za prikaz (bez dodira), pomerena za [shiftX] i [shiftY] od mesta mere ka unutrašnjosti sobe. */
+@Composable
+private fun MeasureText(
+    text: String,
+    anchor: MeasureAnchor,
+    scale: Float,
+    offset: Offset,
+    shiftX: Dp,
+    shiftY: Dp
+) {
+    val density = LocalDensity.current
+    val halfW = with(density) { 28.dp.toPx() }
+    val halfH = with(density) { 10.dp.toPx() }
+    val dx = with(density) { shiftX.toPx() }
+    val dy = with(density) { shiftY.toPx() }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (offset.x + (anchor.xM * scale).toFloat() - halfW + dx).roundToInt(),
+                    (offset.y + (anchor.yM * scale).toFloat() - halfH + dy).roundToInt()
+                )
+            }
+            .size(56.dp, 20.dp)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f), RoundedCornerShape(6.dp))
+    ) {
+        Text(text = text, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+    }
+}
 
 /** Stanje izmene jedne mere sobe: koja soba i koja mera. */
 private data class MeasureEdit(val roomId: String, val kind: MeasureKind)
